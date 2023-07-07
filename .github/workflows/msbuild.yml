@@ -39,6 +39,7 @@ jobs:
         move Win32\Release\libcdi.dll libcdi\x86\libcdi.dll
         move Win32\Release\cditest.exe libcdi\x86\cditest.exe
         copy LICENSE.txt libcdi\LICENSE
+        copy README.txt libcdi\README.txt
 
     - name: Run UPX
       uses: crazy-max/ghaction-upx@v2
@@ -54,8 +55,8 @@ jobs:
       with:
         type: 'zip'
         filename: 'libcdi.zip'
-        directory: 'libcdi'
-        path: '.'
+        directory: '.'
+        path: 'libcdi'
 
     - name: Delete old release
       continue-on-error: true
@@ -68,6 +69,6 @@ jobs:
     - name: Release
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        gh release create latest libcdi\libcdi.zip --latest -t "Development Build"
+        gh release create latest libcdi.zip --latest -t "Development Build"
       env:
         GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
