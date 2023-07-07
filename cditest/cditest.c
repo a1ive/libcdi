@@ -52,7 +52,6 @@ enum CDI_ATA_DWORD
 	CDI_DWORD_POWER_ON_COUNT,
 	CDI_DWORD_ROTATION_RATE,
 	CDI_DWORD_DRIVE_LETTER,
-	CDI_DWORD_DISK_STATUS,
 	CDI_DWORD_DISK_VENDOR_ID, // SSD_VENDOR_NVME = 19
 };
 
@@ -93,6 +92,7 @@ CHAR*		(WINAPI *cdi_get_string)(CDI_SMART* ptr, INT index, enum CDI_ATA_STRING a
 VOID		(WINAPI *cdi_free_string)(CHAR* ptr);
 
 CHAR*		(WINAPI* cdi_get_smart_format)(CDI_SMART* ptr, INT index);
+BYTE		(WINAPI* cdi_get_smart_id)(CDI_SMART* ptr, INT index, INT attr);
 CHAR*		(WINAPI *cdi_get_smart_value)(CDI_SMART* ptr, INT index, INT attr);
 INT			(WINAPI *cdi_get_smart_status)(CDI_SMART* ptr, INT index, INT attr);
 
@@ -134,6 +134,7 @@ load_cdi(void)
 	*(FARPROC*)&cdi_free_string = GetProcAddress(dll, "cdi_free_string");
 
 	*(FARPROC*)&cdi_get_smart_format = GetProcAddress(dll, "cdi_get_smart_format");
+	*(FARPROC*)&cdi_get_smart_id = GetProcAddress(dll, "cdi_get_smart_id");
 	*(FARPROC*)&cdi_get_smart_value = GetProcAddress(dll, "cdi_get_smart_value");
 	*(FARPROC*)&cdi_get_smart_status = GetProcAddress(dll, "cdi_get_smart_status");
 
@@ -148,6 +149,7 @@ load_cdi(void)
 		cdi_get_string == NULL ||
 		cdi_free_string == NULL ||
 		cdi_get_smart_format == NULL ||
+		cdi_get_smart_id == NULL ||
 		cdi_get_smart_value == NULL ||
 		cdi_get_smart_status == NULL)
 	{
@@ -174,6 +176,7 @@ unload_cdi(HMODULE dll)
 	cdi_free_string = NULL;
 
 	cdi_get_smart_format = NULL;
+	cdi_get_smart_id = NULL;
 	cdi_get_smart_value = NULL;
 	cdi_get_smart_status = NULL;
 
@@ -193,6 +196,7 @@ int main(int argc, char* argv[])
 	for (i = 0; i < count; i++)
 	{
 		INT d;
+		DWORD n;
 		CHAR* str;
 		BOOL ssd;
 		printf("\n");
@@ -239,6 +243,19 @@ int main(int argc, char* argv[])
 				get_health_status(cdi_get_int(smart, i, CDI_INT_DISK_STATUS)));
 
 		printf("\tTemperature: %d (C)\n", cdi_get_int(smart, i, CDI_INT_TEMPERATURE));
+
+		str = cdi_get_smart_format(smart, i);
+		printf("\tID  Status %s\n", str);
+		cdi_free_string(str);
+
+		n = cdi_get_dword(smart, i, CDI_DWORD_ATTR_COUNT);
+		for (INT j = 0; j < (INT)n; j++)
+		{
+			str = cdi_get_smart_value(smart, i, j);
+			printf("\t%02X %7s %s\n",
+				cdi_get_smart_id(smart, i, j), get_health_status(cdi_get_smart_status(smart, i, j)), str);
+			cdi_free_string(str);
+		}
 	}
 
 	cdi_destroy_smart(smart);

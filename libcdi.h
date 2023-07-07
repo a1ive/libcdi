@@ -54,7 +54,6 @@ enum CDI_ATA_DWORD
 	CDI_DWORD_POWER_ON_COUNT,
 	CDI_DWORD_ROTATION_RATE,
 	CDI_DWORD_DRIVE_LETTER,
-	CDI_DWORD_DISK_STATUS,
 	CDI_DWORD_DISK_VENDOR_ID, // SSD_VENDOR_NVME = 19
 };
 
@@ -100,7 +99,8 @@ __declspec(dllexport) DWORD			WINAPI cdi_get_dword(CDI_SMART* ptr, INT index, en
 __declspec(dllexport) CHAR*			WINAPI cdi_get_string(CDI_SMART* ptr, INT index, enum CDI_ATA_STRING attr);
 __declspec(dllexport) VOID			WINAPI cdi_free_string(CHAR* ptr);
 
-__declspec(dllexport) CHAR* WINAPI cdi_get_smart_format(CDI_SMART* ptr, INT index);
+__declspec(dllexport) CHAR*			WINAPI cdi_get_smart_format(CDI_SMART* ptr, INT index);
+__declspec(dllexport) BYTE			WINAPI cdi_get_smart_id(CDI_SMART* ptr, INT index, INT attr);
 __declspec(dllexport) CHAR*			WINAPI cdi_get_smart_value(CDI_SMART* ptr, INT index, INT attr);
 __declspec(dllexport) INT			WINAPI cdi_get_smart_status(CDI_SMART* ptr, INT index, INT attr);
 

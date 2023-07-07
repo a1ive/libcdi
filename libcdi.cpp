@@ -208,8 +208,6 @@ cdi_get_dword(CDI_SMART * ptr, INT index, enum CDI_ATA_DWORD attr)
 		return ptr->vars[index].NominalMediaRotationRate;
 	case CDI_DWORD_DRIVE_LETTER:
 		return ptr->vars[index].DriveLetterMap;
-	case CDI_DWORD_DISK_STATUS:
-		return ptr->vars[index].DiskStatus;
 	case CDI_DWORD_DISK_VENDOR_ID:
 		return ptr->vars[index].DiskVendorId;
 	}
@@ -276,6 +274,12 @@ cdi_get_smart_format(CDI_SMART * ptr, INT index)
 	}
 		
 	return cs_to_str(fmt);
+}
+
+extern "C" __declspec(dllexport) BYTE WINAPI
+cdi_get_smart_id(CDI_SMART * ptr, INT index, INT attr)
+{
+	return ptr->vars[index].Attribute[attr].Id;
 }
 
 extern "C" __declspec(dllexport) CHAR* WINAPI
