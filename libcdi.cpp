@@ -6,7 +6,7 @@
 
 #pragma comment(lib, "pathcch.lib")
 
-extern "C" __declspec(dllexport) CDI_SMART* WINAPI
+extern "C" CDI_SMART* WINAPI
 cdi_create_smart()
 {
 	auto ata = new CDI_SMART;
@@ -35,7 +35,7 @@ cdi_create_smart()
 	return ata;
 }
 
-extern "C" __declspec(dllexport) VOID WINAPI
+extern "C" VOID WINAPI
 cdi_destroy_smart(CDI_SMART * ptr)
 {
 	if (ptr)
@@ -46,7 +46,7 @@ cdi_destroy_smart(CDI_SMART * ptr)
 	CoUninitialize();
 }
 
-extern "C" __declspec(dllexport) VOID WINAPI
+extern "C" VOID WINAPI
 cdi_init_smart(CDI_SMART * ptr, BOOL sort_drive_letter)
 {
 	BOOL change_disk = TRUE;
@@ -68,7 +68,7 @@ cdi_init_smart(CDI_SMART * ptr, BOOL sort_drive_letter)
 	}
 }
 
-extern "C" __declspec(dllexport) DWORD WINAPI
+extern "C" DWORD WINAPI
 cdi_update_smart(CDI_SMART * ptr, INT index)
 {
 	return ptr->UpdateSmartInfo(index);
@@ -86,13 +86,13 @@ CHAR* cs_to_str(CString str)
 	return charBuf;
 }
 
-extern "C" __declspec(dllexport) INT WINAPI
+extern "C" INT WINAPI
 cdi_get_disk_count(CDI_SMART * ptr)
 {
 	return (INT)ptr->vars.GetCount();
 }
 
-extern "C" __declspec(dllexport) BOOL WINAPI
+extern "C" BOOL WINAPI
 cdi_get_bool(CDI_SMART * ptr, INT index, enum CDI_ATA_BOOL attr)
 {
 	switch (attr)
@@ -133,7 +133,7 @@ cdi_get_bool(CDI_SMART * ptr, INT index, enum CDI_ATA_BOOL attr)
 	return FALSE;
 }
 
-extern "C" __declspec(dllexport) INT WINAPI
+extern "C" INT WINAPI
 cdi_get_int(CDI_SMART * ptr, INT index, enum CDI_ATA_INT attr)
 {
 	switch (attr)
@@ -187,7 +187,7 @@ cdi_get_int(CDI_SMART * ptr, INT index, enum CDI_ATA_INT attr)
 	return -1;
 }
 
-extern "C" __declspec(dllexport) DWORD WINAPI
+extern "C" DWORD WINAPI
 cdi_get_dword(CDI_SMART * ptr, INT index, enum CDI_ATA_DWORD attr)
 {
 	switch (attr)
@@ -214,7 +214,7 @@ cdi_get_dword(CDI_SMART * ptr, INT index, enum CDI_ATA_DWORD attr)
 	return 0;
 }
 
-extern "C" __declspec(dllexport) CHAR* WINAPI
+extern "C" CHAR* WINAPI
 cdi_get_string(CDI_SMART * ptr, INT index, enum CDI_ATA_STRING attr)
 {
 	switch (attr)
@@ -243,14 +243,14 @@ cdi_get_string(CDI_SMART * ptr, INT index, enum CDI_ATA_STRING attr)
 	return NULL;
 }
 
-extern "C" __declspec(dllexport) VOID WINAPI
+extern "C" VOID WINAPI
 cdi_free_string(CHAR* ptr)
 {
 	if (ptr)
 		CoTaskMemFree(ptr);
 }
 
-extern "C" __declspec(dllexport) CHAR* WINAPI
+extern "C" CHAR* WINAPI
 cdi_get_smart_format(CDI_SMART * ptr, INT index)
 {
 	CString fmt;
@@ -276,13 +276,13 @@ cdi_get_smart_format(CDI_SMART * ptr, INT index)
 	return cs_to_str(fmt);
 }
 
-extern "C" __declspec(dllexport) BYTE WINAPI
+extern "C" BYTE WINAPI
 cdi_get_smart_id(CDI_SMART * ptr, INT index, INT attr)
 {
 	return ptr->vars[index].Attribute[attr].Id;
 }
 
-extern "C" __declspec(dllexport) CHAR* WINAPI
+extern "C" CHAR* WINAPI
 cdi_get_smart_value(CDI_SMART * ptr, INT index, INT attr)
 {
 	CString cstr;
@@ -373,7 +373,7 @@ cdi_get_smart_value(CDI_SMART * ptr, INT index, INT attr)
 	return cs_to_str(cstr);
 }
 
-extern "C" __declspec(dllexport) INT WINAPI
+extern "C" INT WINAPI
 cdi_get_smart_status(CDI_SMART * ptr, INT index, INT attr)
 {
 	BYTE attr_status[CAtaSmart::MAX_ATTRIBUTE]{};

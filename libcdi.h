@@ -87,21 +87,21 @@ typedef CAtaSmart CDI_SMART;
 
 typedef struct _CDI_SMART CDI_SMART;
 
-__declspec(dllexport) CDI_SMART*	WINAPI cdi_create_smart(VOID);
-__declspec(dllexport) VOID			WINAPI cdi_destroy_smart(CDI_SMART* ptr);
-__declspec(dllexport) VOID			WINAPI cdi_init_smart(CDI_SMART* ptr, BOOL sort_drive_letter);
-__declspec(dllexport) DWORD			WINAPI cdi_update_smart(CDI_SMART* ptr, INT index);
-__declspec(dllexport) INT			WINAPI cdi_get_disk_count(CDI_SMART* ptr);
+CDI_SMART*	WINAPI cdi_create_smart(VOID);
+VOID		WINAPI cdi_destroy_smart(CDI_SMART* ptr);
+VOID		WINAPI cdi_init_smart(CDI_SMART* ptr, BOOL sort_drive_letter);
+DWORD		WINAPI cdi_update_smart(CDI_SMART* ptr, INT index);
+INT			WINAPI cdi_get_disk_count(CDI_SMART* ptr);
 
-__declspec(dllexport) BOOL			WINAPI cdi_get_bool(CDI_SMART* ptr, INT index, enum CDI_ATA_BOOL attr);
-__declspec(dllexport) INT			WINAPI cdi_get_int(CDI_SMART* ptr, INT index, enum CDI_ATA_INT attr);
-__declspec(dllexport) DWORD			WINAPI cdi_get_dword(CDI_SMART* ptr, INT index, enum CDI_ATA_DWORD attr);
-__declspec(dllexport) CHAR*			WINAPI cdi_get_string(CDI_SMART* ptr, INT index, enum CDI_ATA_STRING attr);
-__declspec(dllexport) VOID			WINAPI cdi_free_string(CHAR* ptr);
+BOOL		WINAPI cdi_get_bool(CDI_SMART* ptr, INT index, enum CDI_ATA_BOOL attr);
+INT			WINAPI cdi_get_int(CDI_SMART* ptr, INT index, enum CDI_ATA_INT attr);
+DWORD		WINAPI cdi_get_dword(CDI_SMART* ptr, INT index, enum CDI_ATA_DWORD attr);
+CHAR*		WINAPI cdi_get_string(CDI_SMART* ptr, INT index, enum CDI_ATA_STRING attr);
+VOID		WINAPI cdi_free_string(CHAR* ptr);
 
-__declspec(dllexport) CHAR*			WINAPI cdi_get_smart_format(CDI_SMART* ptr, INT index);
-__declspec(dllexport) BYTE			WINAPI cdi_get_smart_id(CDI_SMART* ptr, INT index, INT attr);
-__declspec(dllexport) CHAR*			WINAPI cdi_get_smart_value(CDI_SMART* ptr, INT index, INT attr);
-__declspec(dllexport) INT			WINAPI cdi_get_smart_status(CDI_SMART* ptr, INT index, INT attr);
+CHAR*		WINAPI cdi_get_smart_format(CDI_SMART* ptr, INT index);
+BYTE		WINAPI cdi_get_smart_id(CDI_SMART* ptr, INT index, INT attr);
+CHAR*		WINAPI cdi_get_smart_value(CDI_SMART* ptr, INT index, INT attr);
+INT			WINAPI cdi_get_smart_status(CDI_SMART* ptr, INT index, INT attr);
 
 #endif
