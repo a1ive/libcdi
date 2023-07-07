@@ -68,6 +68,6 @@ jobs:
     - name: Release
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        gh release create latest libcdi.zip --latest -t "Development Build"
+        gh release create latest libcdi\libcdi.zip --latest -t "Development Build"
       env:
         GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
