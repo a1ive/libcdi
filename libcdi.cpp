@@ -12,24 +12,6 @@ cdi_create_smart()
 	auto ata = new CDI_SMART;
 	//SetDebugMode(1);
 	(void)CoInitializeEx(0, COINIT_APARTMENTTHREADED);
-	ata->SetAtaPassThroughSmart(TRUE);
-
-	ata->FlagNvidiaController = TRUE;
-	ata->FlagMarvellController = TRUE;
-	ata->FlagUsbSat = TRUE;
-	ata->FlagUsbSunplus = TRUE;
-	ata->FlagUsbIodata = TRUE;
-	ata->FlagUsbLogitec = TRUE;
-	ata->FlagUsbProlific = TRUE;
-	ata->FlagUsbJmicron = TRUE;
-	ata->FlagUsbCypress = TRUE;
-	ata->FlagUsbMemory = TRUE;
-	ata->FlagUsbNVMeJMicron = TRUE;
-	ata->FlagUsbNVMeASMedia = TRUE;
-	ata->FlagUsbNVMeRealtek = TRUE;
-	ata->FlagMegaRAID = TRUE;
-	ata->FlagIntelVROC = TRUE;
-	ata->FlagUsbASM1352R = TRUE;
 
 	return ata;
 }
