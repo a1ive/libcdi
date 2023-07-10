@@ -81,7 +81,7 @@ typedef struct _CDI_SMART CDI_SMART;
 
 CDI_SMART*	(WINAPI *cdi_create_smart)(VOID);
 VOID		(WINAPI *cdi_destroy_smart)(CDI_SMART* ptr);
-VOID		(WINAPI *cdi_init_smart)(CDI_SMART* ptr, BOOL sort_drive_letter);
+VOID		(WINAPI *cdi_init_smart)(CDI_SMART* ptr, BOOL use_wmi, BOOL advanced_disk_search, BOOL workaround_hd204ui, BOOL workaround_adata_ssd, BOOL hide_no_smart_disk, BOOL sort_drive_letter);
 DWORD		(WINAPI *cdi_update_smart)(CDI_SMART* ptr, INT index);
 INT			(WINAPI *cdi_get_disk_count)(CDI_SMART* ptr);
 
@@ -189,7 +189,7 @@ int main(int argc, char* argv[])
 	HMODULE dll = load_cdi();
 	CDI_SMART* smart = cdi_create_smart();
 
-	cdi_init_smart(smart, TRUE);
+	cdi_init_smart(smart, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE);
 	count = cdi_get_disk_count(smart);
 	printf("Disk count: %d\n", count);
 
@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
 		BOOL ssd;
 		printf("\n");
 		cdi_update_smart(smart, i);
-		printf("DISK%d\n", cdi_get_int(smart, i, CDI_INT_DISK_ID));
+		printf("\\\\.\\PhysicalDrive%d\n", cdi_get_int(smart, i, CDI_INT_DISK_ID));
 
 		ssd = cdi_get_bool(smart, i, CDI_BOOL_SSD);
 		printf("\tSSD: %s\n", ssd ? "Yes" : "No");

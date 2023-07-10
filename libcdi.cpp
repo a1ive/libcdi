@@ -24,7 +24,6 @@ cdi_create_smart()
 	ata->FlagUsbJmicron = TRUE;
 	ata->FlagUsbCypress = TRUE;
 	ata->FlagUsbMemory = TRUE;
-	ata->FlagUsbNVMeJMicron3 = TRUE;
 	ata->FlagUsbNVMeJMicron = TRUE;
 	ata->FlagUsbNVMeASMedia = TRUE;
 	ata->FlagUsbNVMeRealtek = TRUE;
@@ -47,10 +46,11 @@ cdi_destroy_smart(CDI_SMART * ptr)
 }
 
 extern "C" VOID WINAPI
-cdi_init_smart(CDI_SMART * ptr, BOOL sort_drive_letter)
+cdi_init_smart(CDI_SMART * ptr,
+	BOOL use_wmi, BOOL advanced_disk_search, BOOL workaround_hd204ui, BOOL workaround_adata_ssd, BOOL hide_no_smart_disk, BOOL sort_drive_letter)
 {
 	BOOL change_disk = TRUE;
-	ptr->Init(TRUE, TRUE, &change_disk, FALSE, FALSE, FALSE, sort_drive_letter);
+	ptr->Init(use_wmi, advanced_disk_search, &change_disk, workaround_hd204ui, workaround_adata_ssd, hide_no_smart_disk, sort_drive_letter);
 	for (INT i = 0; i < ptr->vars.GetCount(); i++)
 	{
 		if (ptr->vars[i].IsSsd)

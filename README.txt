@@ -14,11 +14,16 @@ CrystalDiskInfo 动态链接库
 		参数：
 			ptr		由 cdi_create_smart 获取的 CDI_SMART 结构体指针。
 		返回值：
-	VOID WINAPI cdi_init_smart(CDI_SMART* ptr, BOOL sort);
+	VOID WINAPI cdi_init_smart(CDI_SMART* ptr, BOOL use_wmi, BOOL advanced_disk_search, BOOL workaround_hd204ui, BOOL workaround_adata_ssd, BOOL hide_no_smart_disk, BOOL sort_drive_letter);
 		初始化 SMART 数据。在 cdi_create_smart 之后执行。遍历所有磁盘，收集 SMART 信息。
 		参数：
 			ptr		由 cdi_create_smart 获取的 CDI_SMART 结构体指针。
-			sort	是否按盘符顺序排列磁盘。
+			use_wmi					是否使用 WMI
+			advanced_disk_search	是否启用高级磁盘搜索
+			workaround_hd204ui		是否启用 HD204UI 特殊方案
+			workaround_adata_ssd	是否启用 ADATA SSD 特殊方案
+			hide_no_smart_disk		是否隐藏无 SMART 磁盘
+			sort_drive_letter		是否按盘符顺序排列磁盘。
 		返回值：
 	DWORD WINAPI cdi_update_smart(CDI_SMART* ptr, INT index);
 		更新硬盘的 SMART 信息。

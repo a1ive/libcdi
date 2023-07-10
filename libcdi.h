@@ -3,7 +3,7 @@
 #define VC_EXTRALEAN
 #include <windows.h>
 
-#define CDI_VERSION "9.0.1"
+#define CDI_VERSION "9.1.0"
 
 enum CDI_ATA_BOOL
 {
@@ -89,7 +89,7 @@ typedef struct _CDI_SMART CDI_SMART;
 
 CDI_SMART*	WINAPI cdi_create_smart(VOID);
 VOID		WINAPI cdi_destroy_smart(CDI_SMART* ptr);
-VOID		WINAPI cdi_init_smart(CDI_SMART* ptr, BOOL sort_drive_letter);
+VOID		WINAPI cdi_init_smart(CDI_SMART* ptr, BOOL use_wmi, BOOL advanced_disk_search, BOOL workaround_hd204ui, BOOL workaround_adata_ssd, BOOL hide_no_smart_disk, BOOL sort_drive_letter);
 DWORD		WINAPI cdi_update_smart(CDI_SMART* ptr, INT index);
 INT			WINAPI cdi_get_disk_count(CDI_SMART* ptr);
 
