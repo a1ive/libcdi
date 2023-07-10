@@ -45,12 +45,46 @@ cdi_destroy_smart(CDI_SMART * ptr)
 	CoUninitialize();
 }
 
+inline BOOL
+check_flag(UINT64 flags, UINT64 mask)
+{
+	return (flags & mask) ? TRUE : FALSE;
+}
+
 extern "C" VOID WINAPI
-cdi_init_smart(CDI_SMART * ptr,
-	BOOL use_wmi, BOOL advanced_disk_search, BOOL workaround_hd204ui, BOOL workaround_adata_ssd, BOOL hide_no_smart_disk, BOOL sort_drive_letter)
+cdi_init_smart(CDI_SMART * ptr, UINT64 flags)
 {
 	BOOL change_disk = TRUE;
-	ptr->Init(use_wmi, advanced_disk_search, &change_disk, workaround_hd204ui, workaround_adata_ssd, hide_no_smart_disk, sort_drive_letter);
+
+	ptr->FlagNoWakeUp = check_flag(flags, CDI_FLAG_NO_WAKEUP);
+	ptr->SetAtaPassThroughSmart(check_flag(flags, CDI_FLAG_ATA_PASS_THROUGH));
+
+	ptr->FlagNvidiaController = check_flag(flags, CDI_FLAG_ENABLE_NVIDIA);
+	ptr->FlagMarvellController = check_flag(flags, CDI_FLAG_ENABLE_MARVELL);
+	ptr->FlagUsbSat = check_flag(flags, CDI_FLAG_ENABLE_USB_SAT);
+	ptr->FlagUsbSunplus = check_flag(flags, CDI_FLAG_ENABLE_USB_SUNPLUS);
+	ptr->FlagUsbIodata = check_flag(flags, CDI_FLAG_ENABLE_USB_IODATA);
+	ptr->FlagUsbLogitec = check_flag(flags, CDI_FLAG_ENABLE_USB_LOGITEC);
+	ptr->FlagUsbProlific = check_flag(flags, CDI_FLAG_ENABLE_USB_PROLIFIC);
+	ptr->FlagUsbJmicron = check_flag(flags, CDI_FLAG_ENABLE_USB_JMICRON);
+	ptr->FlagUsbCypress = check_flag(flags, CDI_FLAG_ENABLE_USB_CYPRESS);
+	ptr->FlagUsbMemory = check_flag(flags, CDI_FLAG_ENABLE_USB_MEMORY);
+	ptr->FlagUsbNVMeJMicron3 = check_flag(flags, CDI_FLAG_ENABLE_NVME_JMICRON3);
+	ptr->FlagUsbNVMeJMicron = check_flag(flags, CDI_FLAG_ENABLE_NVME_JMICRON);
+	ptr->FlagUsbNVMeASMedia = check_flag(flags, CDI_FLAG_ENABLE_NVME_ASMEDIA);
+	ptr->FlagUsbNVMeRealtek = check_flag(flags, CDI_FLAG_ENABLE_NVME_REALTEK);
+	ptr->FlagMegaRAID = check_flag(flags, CDI_FLAG_ENABLE_MEGA_RAID);
+	ptr->FlagIntelVROC = check_flag(flags, CDI_FLAG_ENABLE_INTEL_VROC);
+	ptr->FlagUsbASM1352R = check_flag(flags, CDI_FLAG_ENABLE_ASM1352R);
+	ptr->FlagAMD_RC2 = check_flag(flags, CDI_FLAG_ENABLE_AMD_RC2);
+
+	ptr->Init(check_flag(flags, CDI_FLAG_USE_WMI),
+		check_flag(flags, CDI_FLAG_ADVANCED_SEARCH),
+		&change_disk,
+		check_flag(flags, CDI_FLAG_WORKAROUND_HD204UI),
+		check_flag(flags, CDI_FLAG_WORKAROUND_ADATA),
+		check_flag(flags, CDI_FLAG_HIDE_NO_SMART),
+		check_flag(flags, CDI_FLAG_SORT_DRIVE_LETTER));
 	for (INT i = 0; i < ptr->vars.GetCount(); i++)
 	{
 		if (ptr->vars[i].IsSsd)

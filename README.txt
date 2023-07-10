@@ -14,16 +14,11 @@ CrystalDiskInfo 动态链接库
 		参数：
 			ptr		由 cdi_create_smart 获取的 CDI_SMART 结构体指针。
 		返回值：
-	VOID WINAPI cdi_init_smart(CDI_SMART* ptr, BOOL use_wmi, BOOL advanced_disk_search, BOOL workaround_hd204ui, BOOL workaround_adata_ssd, BOOL hide_no_smart_disk, BOOL sort_drive_letter);
+	VOID WINAPI cdi_init_smart(CDI_SMART* ptr, UINT64 flags);
 		初始化 SMART 数据。在 cdi_create_smart 之后执行。遍历所有磁盘，收集 SMART 信息。
 		参数：
 			ptr		由 cdi_create_smart 获取的 CDI_SMART 结构体指针。
-			use_wmi					是否使用 WMI
-			advanced_disk_search	是否启用高级磁盘搜索
-			workaround_hd204ui		是否启用 HD204UI 特殊方案
-			workaround_adata_ssd	是否启用 ADATA SSD 特殊方案
-			hide_no_smart_disk		是否隐藏无 SMART 磁盘
-			sort_drive_letter		是否按盘符顺序排列磁盘。
+			flags	设置磁盘处理的各种选项，见下方 磁盘处理选项 部分。建议值为 0x01FBFF83。
 		返回值：
 	DWORD WINAPI cdi_update_smart(CDI_SMART* ptr, INT index);
 		更新硬盘的 SMART 信息。
@@ -108,6 +103,34 @@ CrystalDiskInfo 动态链接库
 			attr	SMART 属性序号，从 0 开始，最大值为 CDI_DWORD_ATTR_COUNT 属性的值减 1。
 		返回值：
 			SMART 属性的状态。请参考 磁盘健康状态 部分。
+
+磁盘处理选项
+	#define CDI_FLAG_USE_WMI				(1ULL << 0) // TRUE
+	#define CDI_FLAG_ADVANCED_SEARCH		(1ULL << 1) // TRUE
+	#define CDI_FLAG_WORKAROUND_HD204UI		(1ULL << 2) // FALSE
+	#define CDI_FLAG_WORKAROUND_ADATA		(1ULL << 3) // FALSE
+	#define CDI_FLAG_HIDE_NO_SMART			(1ULL << 4) // FALSE
+	#define CDI_FLAG_SORT_DRIVE_LETTER		(1ULL << 5) // FALSE
+	#define CDI_FLAG_NO_WAKEUP				(1ULL << 6) // FALSE
+	#define CDI_FLAG_ATA_PASS_THROUGH		(1ULL << 7) // TRUE
+	#define CDI_FLAG_ENABLE_NVIDIA			(1ULL << 8)  // TRUE
+	#define CDI_FLAG_ENABLE_MARVELL			(1ULL << 9)  // TRUE
+	#define CDI_FLAG_ENABLE_USB_SAT			(1ULL << 10) // TRUE
+	#define CDI_FLAG_ENABLE_USB_SUNPLUS		(1ULL << 11) // TRUE
+	#define CDI_FLAG_ENABLE_USB_IODATA		(1ULL << 12) // TRUE
+	#define CDI_FLAG_ENABLE_USB_LOGITEC		(1ULL << 13) // TRUE
+	#define CDI_FLAG_ENABLE_USB_PROLIFIC	(1ULL << 14) // TRUE
+	#define CDI_FLAG_ENABLE_USB_JMICRON		(1ULL << 15) // TRUE
+	#define CDI_FLAG_ENABLE_USB_CYPRESS		(1ULL << 16) // TRUE
+	#define CDI_FLAG_ENABLE_USB_MEMORY		(1ULL << 17) // TRUE
+	#define CDI_FLAG_ENABLE_NVME_JMICRON3	(1ULL << 18) // FALSE
+	#define CDI_FLAG_ENABLE_NVME_JMICRON	(1ULL << 19) // TRUE
+	#define CDI_FLAG_ENABLE_NVME_ASMEDIA	(1ULL << 20) // TRUE
+	#define CDI_FLAG_ENABLE_NVME_REALTEK	(1ULL << 21) // TRUE
+	#define CDI_FLAG_ENABLE_MEGA_RAID		(1ULL << 22) // TRUE
+	#define CDI_FLAG_ENABLE_INTEL_VROC		(1ULL << 23) // TRUE
+	#define CDI_FLAG_ENABLE_ASM1352R		(1ULL << 24) // TRUE
+	#define CDI_FLAG_ENABLE_AMD_RC2			(1ULL << 25) // FALSE
 
 磁盘属性 (BOOL)：
 	enum CDI_ATA_BOOL
