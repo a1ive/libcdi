@@ -143,7 +143,7 @@ VOID		(WINAPI *cdi_free_string)(CHAR* ptr);
 
 CHAR*		(WINAPI *cdi_get_smart_format)(CDI_SMART* ptr, INT index);
 BYTE		(WINAPI *cdi_get_smart_id)(CDI_SMART* ptr, INT index, INT attr);
-CHAR*		(WINAPI *cdi_get_smart_value)(CDI_SMART* ptr, INT index, INT attr);
+CHAR*		(WINAPI *cdi_get_smart_value)(CDI_SMART* ptr, INT index, INT attr, BOOL hex);
 INT			(WINAPI *cdi_get_smart_status)(CDI_SMART* ptr, INT index, INT attr);
 
 static inline LPCSTR
@@ -305,7 +305,7 @@ int main(int argc, char* argv[])
 		n = cdi_get_dword(smart, i, CDI_DWORD_ATTR_COUNT);
 		for (INT j = 0; j < (INT)n; j++)
 		{
-			str = cdi_get_smart_value(smart, i, j);
+			str = cdi_get_smart_value(smart, i, j, FALSE);
 			printf("\t%02X %7s %s\n",
 				cdi_get_smart_id(smart, i, j), get_health_status(cdi_get_smart_status(smart, i, j)), str);
 			cdi_free_string(str);

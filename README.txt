@@ -77,7 +77,7 @@ CrystalDiskInfo 动态链接库
 			index	硬盘序号，从 0 开始，最大值为 cdi_get_disk_count 的返回值减 1。
 		返回值：
 			SMART 数据的格式。
-			可能的返回值为 RawValues(6)，RawValues(8)，Cur RawValues(8)，Cur Wor --- RawValues(6)，Cur Wor Thr RawValues(6)，Cur Wor Thr RawValues(7)。
+			可能的返回值为 RawValues(7)，RawValues(8)，Cur RawValues(8)，Cur Wor --- RawValues(6)，Cur Wor Thr RawValues(6)，Cur Wor --- RawValues(7), Cur Wor Thr RawValues(7)。
 			使用 cdi_free_string 释放内存。
 	BYTE WINAPI cdi_get_smart_id(CDI_SMART* ptr, INT index, INT attr);
 		获取 SMART 属性的 ID。
@@ -87,12 +87,13 @@ CrystalDiskInfo 动态链接库
 			attr	SMART 属性序号，从 0 开始，最大值为 CDI_DWORD_ATTR_COUNT 属性的值减 1。
 		返回值：
 			SMART 属性的 ID。
-	CHAR* WINAPI cdi_get_smart_value(CDI_SMART* ptr, INT index, INT attr);
+	CHAR* WINAPI cdi_get_smart_value(CDI_SMART* ptr, INT index, INT attr, BOOL hex);
 		获取 SMART 属性的数据。
 		参数：
 			ptr		由 cdi_create_smart 获取的 CDI_SMART 结构体指针。
 			index	硬盘序号，从 0 开始，最大值为 cdi_get_disk_count 的返回值减 1。
 			attr	SMART 属性序号，从 0 开始，最大值为 CDI_DWORD_ATTR_COUNT 属性的值减 1。
+			hex		是否以十六进制格式显示原始值。
 		返回值：
 			SMART 属性的数据。使用 cdi_free_string 释放内存。
 	INT WINAPI cdi_get_smart_status(CDI_SMART* ptr, INT index, INT attr);

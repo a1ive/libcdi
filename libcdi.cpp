@@ -272,17 +272,20 @@ extern "C" CHAR* WINAPI
 cdi_get_smart_format(CDI_SMART * ptr, INT index)
 {
 	CString fmt;
-	if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_NVME)
-		fmt = _T("RawValues(6)");
-	else if (ptr->vars[index].IsRawValues8)
+	if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_SANDFORCE)
 	{
-		if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_JMICRON)
-			fmt = _T("Cur RawValues(8)");
+		if (ptr->vars[index].IsThresholdCorrect)
+			fmt = _T("Cur Wor Thr RawValues(7)");
 		else
-			fmt = _T("RawValues(8)");
+			fmt = _T("Cur Wor --- RawValues(7)");
 	}
-	else if (ptr->vars[index].IsRawValues7)
-		fmt = _T("Cur Wor Thr RawValues(7)");
+	else if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_JMICRON
+		&& ptr->vars[index].IsRawValues8)
+		fmt = _T("Cur RawValues(8)");
+	else if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_INDILINX)
+		fmt = _T("RawValues(8)");
+	else if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_NVME)
+		fmt = _T("RawValues(7)");
 	else
 	{
 		if (ptr->vars[index].IsThresholdCorrect)
@@ -301,93 +304,85 @@ cdi_get_smart_id(CDI_SMART * ptr, INT index, INT attr)
 }
 
 extern "C" CHAR* WINAPI
-cdi_get_smart_value(CDI_SMART * ptr, INT index, INT attr)
+cdi_get_smart_value(CDI_SMART * ptr, INT index, INT attr, BOOL hex)
 {
 	CString cstr;
-	if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_NVME)
+	UINT64 raw;
+	SMART_ATTRIBUTE* data = &ptr->vars[index].Attribute[attr];
+
+	if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_SANDFORCE)
 	{
-		cstr.Format(_T("%02X%02X%02X%02X%02X%02X"),
-			ptr->vars[index].Attribute[attr].RawValue[5],
-			ptr->vars[index].Attribute[attr].RawValue[4],
-			ptr->vars[index].Attribute[attr].RawValue[3],
-			ptr->vars[index].Attribute[attr].RawValue[2],
-			ptr->vars[index].Attribute[attr].RawValue[1],
-			ptr->vars[index].Attribute[attr].RawValue[0]
-		);
+		raw = ((UINT64)data->Reserved << 48) +
+			((UINT64)data->RawValue[5] << 40) +
+			((UINT64)data->RawValue[4] << 32) +
+			((UINT64)data->RawValue[3] << 24) +
+			((UINT64)data->RawValue[2] << 16) +
+			((UINT64)data->RawValue[1] << 8) +
+			((UINT64)data->RawValue[0]);
+		if (ptr->vars[index].IsThresholdCorrect)
+			cstr.Format(hex ? _T("%3d %3d %3d %014llX") : _T("%3d %3d %3d %I64u"),
+				data->CurrentValue, data->WorstValue, ptr->vars[index].Threshold[attr].ThresholdValue, raw);
+		else
+			cstr.Format(hex ? _T("%3d %3d --- %014llX") : _T("%3d %3d --- %I64u"),
+				data->CurrentValue, data->WorstValue, raw);
 	}
-	else if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_SANDFORCE)
+	else if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_JMICRON
+		&& ptr->vars[index].IsRawValues8)
 	{
-		cstr.Format(_T("%3d %3d %3d %02X%02X%02X%02X%02X%02X%02X"),
-			ptr->vars[index].Attribute[attr].CurrentValue,
-			ptr->vars[index].Attribute[attr].WorstValue,
-			ptr->vars[index].Threshold[attr].ThresholdValue,
-			ptr->vars[index].Attribute[attr].Reserved,
-			ptr->vars[index].Attribute[attr].RawValue[5],
-			ptr->vars[index].Attribute[attr].RawValue[4],
-			ptr->vars[index].Attribute[attr].RawValue[3],
-			ptr->vars[index].Attribute[attr].RawValue[2],
-			ptr->vars[index].Attribute[attr].RawValue[1],
-			ptr->vars[index].Attribute[attr].RawValue[0]
-		);
-	}
-	// For JMicron 60x
-	else if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_JMICRON && ptr->vars[index].IsRawValues8)
-	{
-		cstr.Format(_T("%3d %02X%02X%02X%02X%02X%02X%02X%02X"),
-			ptr->vars[index].Attribute[attr].CurrentValue,
-			ptr->vars[index].Attribute[attr].Reserved,
-			ptr->vars[index].Attribute[attr].RawValue[5],
-			ptr->vars[index].Attribute[attr].RawValue[4],
-			ptr->vars[index].Attribute[attr].RawValue[3],
-			ptr->vars[index].Attribute[attr].RawValue[2],
-			ptr->vars[index].Attribute[attr].RawValue[1],
-			ptr->vars[index].Attribute[attr].RawValue[0],
-			ptr->vars[index].Attribute[attr].WorstValue
-		);
+		raw = ((UINT64)data->Reserved << 56) +
+			((UINT64)data->RawValue[5] << 48) +
+			((UINT64)data->RawValue[4] << 40) +
+			((UINT64)data->RawValue[3] << 32) +
+			((UINT64)data->RawValue[2] << 24) +
+			((UINT64)data->RawValue[1] << 16) +
+			((UINT64)data->RawValue[0] << 8) +
+			((UINT64)data->WorstValue);
+		cstr.Format(hex ? _T("%3d %016llX") : _T("%3d %I64u"),
+			data->CurrentValue, raw);
 	}
 	else if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_INDILINX)
 	{
-		cstr.Format(_T("%02X%02X%02X%02X%02X%02X%02X%02X"),
-			ptr->vars[index].Attribute[attr].RawValue[5],
-			ptr->vars[index].Attribute[attr].RawValue[4],
-			ptr->vars[index].Attribute[attr].RawValue[3],
-			ptr->vars[index].Attribute[attr].RawValue[2],
-			ptr->vars[index].Attribute[attr].RawValue[1],
-			ptr->vars[index].Attribute[attr].RawValue[0],
-			ptr->vars[index].Attribute[attr].WorstValue,
-			ptr->vars[index].Attribute[attr].CurrentValue
-		);
+		raw = ((UINT64)data->RawValue[5] << 56) +
+			((UINT64)data->RawValue[4] << 48) +
+			((UINT64)data->RawValue[3] << 40) +
+			((UINT64)data->RawValue[2] << 32) +
+			((UINT64)data->RawValue[1] << 24) +
+			((UINT64)data->RawValue[0] << 16) +
+			((UINT64)data->WorstValue << 8) +
+			((UINT64)data->CurrentValue);
+		cstr.Format(hex ? _T("%016llX") : _T("%I64u"), raw);
+	}
+	else if (ptr->vars[index].DiskVendorId == CAtaSmart::SSD_VENDOR_NVME)
+	{
+		raw = ((UINT64)data->Reserved << 48) +
+			((UINT64)data->RawValue[5] << 40) +
+			((UINT64)data->RawValue[4] << 32) +
+			((UINT64)data->RawValue[3] << 24) +
+			((UINT64)data->RawValue[2] << 16) +
+			((UINT64)data->RawValue[1] << 8) +
+			((UINT64)data->RawValue[0]);
+		cstr.Format(hex ? _T("%014llX") : _T("%I64u"), raw);
 	}
 	else
 	{
+		raw = ((UINT64)data->RawValue[5] << 40) +
+			((UINT64)data->RawValue[4] << 32) +
+			((UINT64)data->RawValue[3] << 24) +
+			((UINT64)data->RawValue[2] << 16) +
+			((UINT64)data->RawValue[1] << 8) +
+			((UINT64)data->RawValue[0]);
 		if (ptr->vars[index].IsThresholdCorrect)
 		{
-			cstr.Format(_T("%3d %3d %3d %02X%02X%02X%02X%02X%02X"),
-				ptr->vars[index].Attribute[attr].CurrentValue,
-				ptr->vars[index].Attribute[attr].WorstValue,
-				ptr->vars[index].Threshold[attr].ThresholdValue,
-				ptr->vars[index].Attribute[attr].RawValue[5],
-				ptr->vars[index].Attribute[attr].RawValue[4],
-				ptr->vars[index].Attribute[attr].RawValue[3],
-				ptr->vars[index].Attribute[attr].RawValue[2],
-				ptr->vars[index].Attribute[attr].RawValue[1],
-				ptr->vars[index].Attribute[attr].RawValue[0]
-			);
+			cstr.Format(hex ? _T("%3d %3d %3d %012llX") : _T("%3d %3d %3d %I64u"),
+				data->CurrentValue, data->WorstValue, ptr->vars[index].Threshold[attr].ThresholdValue, raw);
 		}
 		else
 		{
-			cstr.Format(_T("%3d %3d --- %02X%02X%02X%02X%02X%02X"),
-				ptr->vars[index].Attribute[attr].CurrentValue,
-				ptr->vars[index].Attribute[attr].WorstValue,
-				ptr->vars[index].Attribute[attr].RawValue[5],
-				ptr->vars[index].Attribute[attr].RawValue[4],
-				ptr->vars[index].Attribute[attr].RawValue[3],
-				ptr->vars[index].Attribute[attr].RawValue[2],
-				ptr->vars[index].Attribute[attr].RawValue[1],
-				ptr->vars[index].Attribute[attr].RawValue[0]
-			);
+			cstr.Format(hex ? _T("%3d %3d --- %012llX") : _T("%3d %3d --- %I64u"),
+				data->CurrentValue, data->WorstValue, raw);
 		}
 	}
+
 	return cs_to_str(cstr);
 }
 
