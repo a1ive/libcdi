@@ -255,6 +255,8 @@ cdi_get_string(CDI_SMART * ptr, INT index, enum CDI_ATA_STRING attr)
 		return cs_to_str(ptr->vars[index].MinorVersion);
 	case CDI_STRING_PNP_ID:
 		return cs_to_str(ptr->vars[index].PnpDeviceId);
+	case CDI_STRING_SMART_KEY:
+		return cs_to_str(ptr->vars[index].SmartKeyName);
 	}
 	return NULL;
 }

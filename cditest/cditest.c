@@ -67,6 +67,7 @@ enum CDI_ATA_STRING
 	CDI_STRING_VERSION_MAJOR,
 	CDI_STRING_VERSION_MINOR,
 	CDI_STRING_PNP_ID,
+	CDI_STRING_SMART_KEY,
 };
 
 enum CDI_DISK_STATUS
@@ -140,8 +141,8 @@ DWORD		(WINAPI *cdi_get_dword)(CDI_SMART* ptr, INT index, enum CDI_ATA_DWORD att
 CHAR*		(WINAPI *cdi_get_string)(CDI_SMART* ptr, INT index, enum CDI_ATA_STRING attr);
 VOID		(WINAPI *cdi_free_string)(CHAR* ptr);
 
-CHAR*		(WINAPI* cdi_get_smart_format)(CDI_SMART* ptr, INT index);
-BYTE		(WINAPI* cdi_get_smart_id)(CDI_SMART* ptr, INT index, INT attr);
+CHAR*		(WINAPI *cdi_get_smart_format)(CDI_SMART* ptr, INT index);
+BYTE		(WINAPI *cdi_get_smart_id)(CDI_SMART* ptr, INT index, INT attr);
 CHAR*		(WINAPI *cdi_get_smart_value)(CDI_SMART* ptr, INT index, INT attr);
 INT			(WINAPI *cdi_get_smart_status)(CDI_SMART* ptr, INT index, INT attr);
 
@@ -292,6 +293,10 @@ int main(int argc, char* argv[])
 				get_health_status(cdi_get_int(smart, i, CDI_INT_DISK_STATUS)));
 
 		printf("\tTemperature: %d (C)\n", cdi_get_int(smart, i, CDI_INT_TEMPERATURE));
+
+		//str = cdi_get_string(smart, i, CDI_STRING_SMART_KEY);
+		//printf("\tSmart Key: %s\n", str);
+		//cdi_free_string(str);
 
 		str = cdi_get_smart_format(smart, i);
 		printf("\tID  Status %s\n", str);
