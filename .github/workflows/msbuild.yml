@@ -41,15 +41,6 @@ jobs:
         copy LICENSE.txt libcdi\LICENSE
         copy README.txt libcdi\README.txt
 
-    - name: Run UPX
-      uses: crazy-max/ghaction-upx@v2
-      with:
-        version: latest
-        files: |
-          .\libcdi\x64\libcdi.dll
-          .\libcdi\x86\libcdi.dll
-        args: --best
-
     - name: Create ZIP
       uses: thedoctor0/zip-release@master
       with:
