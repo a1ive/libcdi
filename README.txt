@@ -18,7 +18,7 @@ CrystalDiskInfo 动态链接库
 		初始化 SMART 数据。在 cdi_create_smart 之后执行。遍历所有磁盘，收集 SMART 信息。
 		参数：
 			ptr		由 cdi_create_smart 获取的 CDI_SMART 结构体指针。
-			flags	设置磁盘处理的各种选项，见下方 磁盘处理选项 部分。建议值为 0x01FBFF83。
+			flags	设置磁盘处理的各种选项，见下方 磁盘处理选项 部分。建议值为 0x01FBFF81。
 		返回值：
 	DWORD WINAPI cdi_update_smart(CDI_SMART* ptr, INT index);
 		更新硬盘的 SMART 信息。
@@ -106,7 +106,7 @@ CrystalDiskInfo 动态链接库
 
 磁盘处理选项
 	#define CDI_FLAG_USE_WMI				(1ULL << 0) // TRUE
-	#define CDI_FLAG_ADVANCED_SEARCH		(1ULL << 1) // TRUE
+	#define CDI_FLAG_ADVANCED_SEARCH		(1ULL << 1) // FALSE
 	#define CDI_FLAG_WORKAROUND_HD204UI		(1ULL << 2) // FALSE
 	#define CDI_FLAG_WORKAROUND_ADATA		(1ULL << 3) // FALSE
 	#define CDI_FLAG_HIDE_NO_SMART			(1ULL << 4) // FALSE
