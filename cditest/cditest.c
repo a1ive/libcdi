@@ -138,12 +138,12 @@ INT			(WINAPI *cdi_get_disk_count)(CDI_SMART* ptr);
 BOOL		(WINAPI *cdi_get_bool)(CDI_SMART* ptr, INT index, enum CDI_ATA_BOOL attr);
 INT			(WINAPI *cdi_get_int)(CDI_SMART* ptr, INT index, enum CDI_ATA_INT attr);
 DWORD		(WINAPI *cdi_get_dword)(CDI_SMART* ptr, INT index, enum CDI_ATA_DWORD attr);
-CHAR*		(WINAPI *cdi_get_string)(CDI_SMART* ptr, INT index, enum CDI_ATA_STRING attr);
-VOID		(WINAPI *cdi_free_string)(CHAR* ptr);
+WCHAR*		(WINAPI *cdi_get_string)(CDI_SMART* ptr, INT index, enum CDI_ATA_STRING attr);
+VOID		(WINAPI *cdi_free_string)(WCHAR* ptr);
 
-CHAR*		(WINAPI *cdi_get_smart_format)(CDI_SMART* ptr, INT index);
+WCHAR*		(WINAPI *cdi_get_smart_format)(CDI_SMART* ptr, INT index);
 BYTE		(WINAPI *cdi_get_smart_id)(CDI_SMART* ptr, INT index, INT attr);
-CHAR*		(WINAPI *cdi_get_smart_value)(CDI_SMART* ptr, INT index, INT attr, BOOL hex);
+WCHAR*		(WINAPI *cdi_get_smart_value)(CDI_SMART* ptr, INT index, INT attr, BOOL hex);
 INT			(WINAPI *cdi_get_smart_status)(CDI_SMART* ptr, INT index, INT attr);
 
 static inline LPCSTR
@@ -206,7 +206,7 @@ load_cdi(void)
 		printf("Cannot find functions in libcdi.dll\n");
 		exit(-1);
 	}
-
+	(void)CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	return dll;
 }
 
@@ -230,6 +230,7 @@ unload_cdi(HMODULE dll)
 	cdi_get_smart_value = NULL;
 	cdi_get_smart_status = NULL;
 
+	CoUninitialize();
 	FreeLibrary(dll);
 }
 
@@ -247,7 +248,7 @@ int main(int argc, char* argv[])
 	{
 		INT d;
 		DWORD n;
-		CHAR* str;
+		WCHAR* str;
 		BOOL ssd;
 		printf("\n");
 		cdi_update_smart(smart, i);
@@ -257,31 +258,31 @@ int main(int argc, char* argv[])
 		printf("\tSSD: %s\n", ssd ? "Yes" : "No");
 
 		str = cdi_get_string(smart, i, CDI_STRING_DRIVE_MAP);
-		printf("\tDrive letters: %s\n", str);
+		printf("\tDrive letters: %ls\n", str);
 		cdi_free_string(str);
 
 		str = cdi_get_string(smart, i, CDI_STRING_MODEL);
-		printf("\tModel: %s\n", str);
+		printf("\tModel: %ls\n", str);
 		cdi_free_string(str);
 
 		str = cdi_get_string(smart, i, CDI_STRING_SN);
-		printf("\tSerial: %s\n", str);
+		printf("\tSerial: %ls\n", str);
 		cdi_free_string(str);
 
 		str = cdi_get_string(smart, i, CDI_STRING_FIRMWARE);
-		printf("\tFirmware: %s\n", str);
+		printf("\tFirmware: %ls\n", str);
 		cdi_free_string(str);
 
 		str = cdi_get_string(smart, i, CDI_STRING_INTERFACE);
-		printf("\tInterface: %s\n", str);
+		printf("\tInterface: %ls\n", str);
 		cdi_free_string(str);
 
 		str = cdi_get_string(smart, i, CDI_STRING_TRANSFER_MODE_CUR);
-		printf("\tCurrent transfer mode: %s\n", str);
+		printf("\tCurrent transfer mode: %ls\n", str);
 		cdi_free_string(str);
 
 		str = cdi_get_string(smart, i, CDI_STRING_TRANSFER_MODE_MAX);
-		printf("\tMax transfer mode: %s\n", str);
+		printf("\tMax transfer mode: %ls\n", str);
 		cdi_free_string(str);
 
 		d = cdi_get_int(smart, i, CDI_INT_LIFE);
@@ -295,18 +296,18 @@ int main(int argc, char* argv[])
 		printf("\tTemperature: %d (C)\n", cdi_get_int(smart, i, CDI_INT_TEMPERATURE));
 
 		//str = cdi_get_string(smart, i, CDI_STRING_SMART_KEY);
-		//printf("\tSmart Key: %s\n", str);
+		//printf("\tSmart Key: %ls\n", str);
 		//cdi_free_string(str);
 
 		str = cdi_get_smart_format(smart, i);
-		printf("\tID  Status %s\n", str);
+		printf("\tID  Status %ls\n", str);
 		cdi_free_string(str);
 
 		n = cdi_get_dword(smart, i, CDI_DWORD_ATTR_COUNT);
 		for (INT j = 0; j < (INT)n; j++)
 		{
 			str = cdi_get_smart_value(smart, i, j, FALSE);
-			printf("\t%02X %7s %s\n",
+			printf("\t%02X %7s %ls\n",
 				cdi_get_smart_id(smart, i, j), get_health_status(cdi_get_smart_status(smart, i, j)), str);
 			cdi_free_string(str);
 		}

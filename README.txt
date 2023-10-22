@@ -4,7 +4,7 @@ CrystalDiskInfo 动态链接库
 	https://github.com/iTXTech/CrystalDiskInfoEmbedded
 导出函数：
 	CDI_SMART* WINAPI cdi_create_smart(VOID)
-		创建 SMART 数据。加载 DLL 后，应首先调用此函数。
+		创建 SMART 数据。加载 DLL 后，应首先执行 CoInitializeEx ，再调用此函数。
 		参数：
 		返回值：
 			返回 CDI_SMART 结构体指针供其他函数使用。
@@ -57,20 +57,20 @@ CrystalDiskInfo 动态链接库
 			attr	磁盘属性，见下方 磁盘属性 (DWORD) 部分。
 		返回值：
 			DWORD 类型的对应磁盘属性。
-	CHAR* WINAPI cdi_get_string(CDI_SMART* ptr, INT index, enum CDI_ATA_STRING attr);
+	WCHAR* WINAPI cdi_get_string(CDI_SMART* ptr, INT index, enum CDI_ATA_STRING attr);
 		获取字符串类型的磁盘属性。
 		参数：
 			ptr		由 cdi_create_smart 获取的 CDI_SMART 结构体指针。
 			index	硬盘序号，从 0 开始，最大值为 cdi_get_disk_count 的返回值减 1。
-			attr	磁盘属性，见下方 磁盘属性 (CHAR*) 部分。
+			attr	磁盘属性，见下方 磁盘属性 (WCHAR*) 部分。
 		返回值：
 			字符串类型的对应磁盘属性。使用 cdi_free_string 释放内存。
-	VOID WINAPI cdi_free_string(CHAR* ptr);
+	VOID WINAPI cdi_free_string(WCHAR* ptr);
 		释放字符串的内存。
 		参数：
 			ptr		字符串指针。
 		返回值：
-	CHAR* WINAPI cdi_get_smart_format(CDI_SMART* ptr, INT index);
+	WCHAR* WINAPI cdi_get_smart_format(CDI_SMART* ptr, INT index);
 		获取 SMART 数据格式。
 		参数：
 			ptr		由 cdi_create_smart 获取的 CDI_SMART 结构体指针。
@@ -87,7 +87,7 @@ CrystalDiskInfo 动态链接库
 			attr	SMART 属性序号，从 0 开始，最大值为 CDI_DWORD_ATTR_COUNT 属性的值减 1。
 		返回值：
 			SMART 属性的 ID。
-	CHAR* WINAPI cdi_get_smart_value(CDI_SMART* ptr, INT index, INT attr, BOOL hex);
+	WCHAR* WINAPI cdi_get_smart_value(CDI_SMART* ptr, INT index, INT attr, BOOL hex);
 		获取 SMART 属性的数据。
 		参数：
 			ptr		由 cdi_create_smart 获取的 CDI_SMART 结构体指针。
@@ -188,7 +188,7 @@ CrystalDiskInfo 动态链接库
 		CDI_DWORD_DISK_VENDOR_ID,
 	};
 
-磁盘属性 (CHAR*)：
+磁盘属性 (WCHAR*)：
 	enum CDI_ATA_STRING
 	{
 		CDI_STRING_SN, // 序列号
