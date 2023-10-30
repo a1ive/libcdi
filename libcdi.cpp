@@ -2,27 +2,22 @@
 #include "AtaSmart.h"
 #include "NVMeInterpreter.h"
 #include "libcdi.h"
+#include "smartids.h"
 
-#pragma comment(lib, "pathcch.lib")
+//#pragma comment(lib, "pathcch.lib")
 
 extern "C" CDI_SMART* WINAPI
 cdi_create_smart()
 {
-	auto ata = new CDI_SMART;
 	//SetDebugMode(1);
 	//(void)CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-
-	return ata;
+	return new CDI_SMART;
 }
 
 extern "C" VOID WINAPI
 cdi_destroy_smart(CDI_SMART * ptr)
 {
-	if (ptr)
-	{
-		delete ptr;
-		ptr = nullptr;
-	}
+	delete ptr;
 	//CoUninitialize();
 }
 
@@ -89,9 +84,9 @@ cdi_update_smart(CDI_SMART * ptr, INT index)
 	return ptr->UpdateSmartInfo(index);
 }
 
-WCHAR* cs_to_wcs(const CString& str)
+inline WCHAR* cs_to_wcs(const CString& str)
 {
-	int len = str.GetLength() + 1;
+	size_t len = str.GetLength() + 1;
 	auto ptr = (WCHAR*)CoTaskMemAlloc(len * sizeof(WCHAR));
 	wcscpy_s(ptr, len, str.GetString());
 	return ptr;
@@ -568,4 +563,22 @@ cdi_get_smart_status(CDI_SMART * ptr, INT index, INT attr)
 	}
 
 	return stat;
+}
+
+extern "C" WCHAR * WINAPI
+cdi_get_smart_name(CDI_SMART * ptr, INT index, BYTE id)
+{
+	for (size_t i = 0; i < ARRAYSIZE(SMART_NAMES); i++)
+	{
+		if (ptr->vars[index].SmartKeyName.CompareNoCase(SMART_NAMES[i].group) == 0)
+		{
+			for (size_t j = 0; j < SMART_NAMES[i].count; j++)
+			{
+				if (id == SMART_NAMES[i].name[j].id)
+					return cs_to_wcs(SMART_NAMES[i].name[j].name);
+			}
+			break;
+		}
+	}
+	return cs_to_wcs(_T("Vendor Specific"));
 }

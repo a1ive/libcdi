@@ -156,5 +156,6 @@ WCHAR*		WINAPI cdi_get_smart_format(CDI_SMART* ptr, INT index);
 BYTE		WINAPI cdi_get_smart_id(CDI_SMART* ptr, INT index, INT attr);
 WCHAR*		WINAPI cdi_get_smart_value(CDI_SMART* ptr, INT index, INT attr, BOOL hex);
 INT			WINAPI cdi_get_smart_status(CDI_SMART* ptr, INT index, INT attr);
+WCHAR*		WINAPI cdi_get_smart_name(CDI_SMART* ptr, INT index, BYTE id);
 
 #endif

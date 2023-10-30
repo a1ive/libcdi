@@ -16,3 +16,4 @@ cdi_get_smart_format
 cdi_get_smart_id
 cdi_get_smart_value
 cdi_get_smart_status
+cdi_get_smart_name

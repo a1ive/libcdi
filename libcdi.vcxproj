@@ -119,6 +119,7 @@
     <ClInclude Include="Priscilla\OsInfoFx.h" />
     <ClInclude Include="Priscilla\UtilityFx.h" />
     <ClInclude Include="SlotSpeedGetter.h" />
+    <ClInclude Include="smartids.h" />
     <ClInclude Include="SPTIUtil.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="StorageQuery.h" />

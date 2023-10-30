@@ -104,6 +104,14 @@ CrystalDiskInfo 动态链接库
 			attr	SMART 属性序号，从 0 开始，最大值为 CDI_DWORD_ATTR_COUNT 属性的值减 1。
 		返回值：
 			SMART 属性的状态。请参考 磁盘健康状态 部分。
+	WCHAR* WINAPI *cdi_get_smart_name(CDI_SMART* ptr, INT index, BYTE id);
+		获取 SMART 属性的名称。
+		参数：
+			ptr		由 cdi_create_smart 获取的 CDI_SMART 结构体指针。
+			index	硬盘序号，从 0 开始，最大值为 cdi_get_disk_count 的返回值减 1。
+			id		SMART 属性的 ID，可由 cdi_get_smart_id 获取。
+		返回值：
+			SMART 属性的名称。使用 cdi_free_string 释放内存。
 
 磁盘处理选项
 	#define CDI_FLAG_USE_WMI				(1ULL << 0) // TRUE

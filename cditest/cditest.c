@@ -145,6 +145,7 @@ WCHAR*		(WINAPI *cdi_get_smart_format)(CDI_SMART* ptr, INT index);
 BYTE		(WINAPI *cdi_get_smart_id)(CDI_SMART* ptr, INT index, INT attr);
 WCHAR*		(WINAPI *cdi_get_smart_value)(CDI_SMART* ptr, INT index, INT attr, BOOL hex);
 INT			(WINAPI *cdi_get_smart_status)(CDI_SMART* ptr, INT index, INT attr);
+WCHAR*		(WINAPI *cdi_get_smart_name)(CDI_SMART* ptr, INT index, BYTE id);
 
 static inline LPCSTR
 get_health_status(enum CDI_DISK_STATUS status)
@@ -187,6 +188,7 @@ load_cdi(void)
 	*(FARPROC*)&cdi_get_smart_id = GetProcAddress(dll, "cdi_get_smart_id");
 	*(FARPROC*)&cdi_get_smart_value = GetProcAddress(dll, "cdi_get_smart_value");
 	*(FARPROC*)&cdi_get_smart_status = GetProcAddress(dll, "cdi_get_smart_status");
+	*(FARPROC*)&cdi_get_smart_name = GetProcAddress(dll, "cdi_get_smart_name");
 
 	if (cdi_create_smart == NULL ||
 		cdi_destroy_smart == NULL ||
@@ -201,7 +203,8 @@ load_cdi(void)
 		cdi_get_smart_format == NULL ||
 		cdi_get_smart_id == NULL ||
 		cdi_get_smart_value == NULL ||
-		cdi_get_smart_status == NULL)
+		cdi_get_smart_status == NULL||
+		cdi_get_smart_name == NULL)
 	{
 		printf("Cannot find functions in libcdi.dll\n");
 		exit(-1);
@@ -229,6 +232,7 @@ unload_cdi(HMODULE dll)
 	cdi_get_smart_id = NULL;
 	cdi_get_smart_value = NULL;
 	cdi_get_smart_status = NULL;
+	cdi_get_smart_name = NULL;
 
 	CoUninitialize();
 	FreeLibrary(dll);
@@ -250,6 +254,7 @@ int main(int argc, char* argv[])
 		DWORD n;
 		WCHAR* str;
 		BOOL ssd;
+		BYTE id;
 		printf("\n");
 		cdi_update_smart(smart, i);
 		printf("\\\\.\\PhysicalDrive%d\n", cdi_get_int(smart, i, CDI_INT_DISK_ID));
@@ -295,20 +300,20 @@ int main(int argc, char* argv[])
 
 		printf("\tTemperature: %d (C)\n", cdi_get_int(smart, i, CDI_INT_TEMPERATURE));
 
-		//str = cdi_get_string(smart, i, CDI_STRING_SMART_KEY);
-		//printf("\tSmart Key: %ls\n", str);
-		//cdi_free_string(str);
-
 		str = cdi_get_smart_format(smart, i);
-		printf("\tID  Status %ls\n", str);
+		printf("\tID  Status %-24ls Name\n", str);
 		cdi_free_string(str);
 
 		n = cdi_get_dword(smart, i, CDI_DWORD_ATTR_COUNT);
 		for (INT j = 0; j < (INT)n; j++)
 		{
 			str = cdi_get_smart_value(smart, i, j, FALSE);
-			printf("\t%02X %7s %ls\n",
-				cdi_get_smart_id(smart, i, j), get_health_status(cdi_get_smart_status(smart, i, j)), str);
+			id = cdi_get_smart_id(smart, i, j);
+			printf("\t%02X %7s %-24ls %ls\n",
+				id,
+				get_health_status(cdi_get_smart_status(smart, i, j)),
+				str,
+				cdi_get_smart_name(smart, i, id));
 			cdi_free_string(str);
 		}
 	}
