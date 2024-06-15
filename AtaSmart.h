@@ -1774,7 +1774,6 @@ public:
 		BYTE				SmartReadThreshold[512]{};
 		SMART_ATTRIBUTE		Attribute[MAX_ATTRIBUTE]{};
 		SMART_THRESHOLD		Threshold[MAX_ATTRIBUTE]{};
-		enum DISK_STATUS	AttributeStatus[MAX_ATTRIBUTE]{};
 
 		BOOL				IsSmartEnabled{};
 		BOOL				IsIdInfoIncorrect{};

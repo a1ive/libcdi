@@ -3743,8 +3743,8 @@ BOOL CAtaSmart::AddDiskNVMe(INT physicalDriveId, INT scsiPort, INT scsiTargetId,
 
 #ifdef JMICRON_USB_RAID_SUPPORT
 	if (nvmePort == NULL)
-#endif
 	{
+#endif
 		asi.Model = asi.IdentifyDevice.N.Model;
 		asi.Model = asi.Model.Mid(0, 40);
 		asi.Model.TrimRight();
@@ -3761,8 +3761,8 @@ BOOL CAtaSmart::AddDiskNVMe(INT physicalDriveId, INT scsiPort, INT scsiTargetId,
 		asi.FirmwareRev = asi.IdentifyDevice.N.FirmwareRev;
 		asi.FirmwareRev = asi.FirmwareRev.Mid(0, 8);
 		asi.FirmwareRev.TrimRight();
-	}
 #ifdef JMICRON_USB_RAID_SUPPORT
+	}
 	else
 	{
 		asi.Model = nvmePort->ModelName;
@@ -3773,7 +3773,6 @@ BOOL CAtaSmart::AddDiskNVMe(INT physicalDriveId, INT scsiPort, INT scsiTargetId,
 		asi.TotalDiskSize = (((DWORD64)nvmePort->Capacity << 32) + (DWORD64)nvmePort->CapacityOffset) * (DWORD64)nvmePort->SectorSize / 1000 / 1000;
 	}
 #endif
-
 	asi.ModelSerial = GetModelSerial(asi.Model, asi.SerialNumber);
 
 	if (diskSize != NULL)
@@ -3823,6 +3822,7 @@ BOOL CAtaSmart::AddDiskNVMe(INT physicalDriveId, INT scsiPort, INT scsiTargetId,
 #ifdef JMICRON_USB_RAID_SUPPORT
 	||  (commandType == CMD_TYPE_JMS586 && GetSmartAttributeNVMeJMS586(scsiPort, scsiTargetId, &asi))
 #endif
+
 		)
 	{
 		asi.IsSmartSupported = TRUE;
@@ -3861,12 +3861,13 @@ BOOL CAtaSmart::AddDiskNVMe(INT physicalDriveId, INT scsiPort, INT scsiTargetId,
 		{
 			asi.MajorVersion.Format(_T("NVM Express %d.%d"), asi.IdentifyDevice.N.MajorVersion, asi.IdentifyDevice.N.MinorVersion);
 		}
-#ifdef JMICRON_USB_RAID_SUPPORT
+
 		if (commandType == COMMAND_TYPE::CMD_TYPE_JMS586)
 		{
 			asi.Interface = L"USB (NVMe/JMicron JMS586)";
 			asi.MajorVersion = L"NVM Express";
 
+#ifdef JMICRON_USB_RAID_SUPPORT
 			static const TCHAR* pcieSpeed[4] = { L"Gen 1.0", L"Gen 2.0", L"Gen 3.0", L"Gen 4.0" };
 			static const TCHAR* pcieLane[5] = { L"x1", L"x2", L"x4", L"x8", L"x16" };
 			if ((0 <= nvmePort->PCIeSpeed && nvmePort->PCIeSpeed < 4)
@@ -3874,8 +3875,9 @@ BOOL CAtaSmart::AddDiskNVMe(INT physicalDriveId, INT scsiPort, INT scsiTargetId,
 			{
 				asi.CurrentTransferMode.Format(L"%s %s", pcieSpeed[nvmePort->PCIeSpeed], pcieLane[nvmePort->PCIeLANE]);
 			}
-		}
 #endif
+		}
+
 		// +AMD_RC2 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 		if (commandType == COMMAND_TYPE::CMD_TYPE_AMD_RC2) {
 			asi.MajorVersion = L"";
@@ -5142,6 +5144,7 @@ BOOL CAtaSmart::IsSsdOcz(ATA_SMART_INFO &asi)
 	if (modelUpper.Find(_T("RADEON R7")) == 0)
 	{
 		flagSmartType = TRUE;
+		return TRUE;
 	}
 
 	// OCZ-TRION100 2015/11/25
@@ -6831,7 +6834,7 @@ BOOL CAtaSmart::ReadLogExtPd(INT physicalDriveId, BYTE target, BYTE logAddress, 
 		return	FALSE;
 	}
 
-	if (TRUE || m_bAtaPassThrough)
+	//if (TRUE || m_bAtaPassThrough) // *Always TRUE if
 	{
 		ATA_PASS_THROUGH_EX_WITH_BUFFERS ab = {};
 		//::ZeroMemory(&ab, sizeof(ab));
@@ -11607,7 +11610,6 @@ DWORD CAtaSmart::CheckDiskStatus(DWORD i)
 
 		if (vars[i].Attribute[0].RawValue[0] > 0)
 		{
-			vars[i].AttributeStatus[0] = DISK_STATUS_BAD;
 			return DISK_STATUS_BAD;
 		}
 
@@ -11616,12 +11618,10 @@ DWORD CAtaSmart::CheckDiskStatus(DWORD i)
 		}
 		else if (vars[i].Attribute[2].RawValue[0] < vars[i].Attribute[3].RawValue[0])
 		{
-			vars[i].AttributeStatus[2] = DISK_STATUS_BAD;
 			return DISK_STATUS_BAD;
 		}
 		else if (vars[i].Attribute[2].RawValue[0] == vars[i].Attribute[3].RawValue[0] && vars[i].Attribute[3].RawValue[0] != 100)
 		{
-			vars[i].AttributeStatus[2] = DISK_STATUS_CAUTION;
 			return DISK_STATUS_CAUTION;
 		}
 
@@ -11687,7 +11687,6 @@ DWORD CAtaSmart::CheckDiskStatus(DWORD i)
 		&&	vars[i].Threshold[j].ThresholdValue != 0
 		&& 	vars[i].Attribute[j].CurrentValue < vars[i].Threshold[j].ThresholdValue)
 		{
-			vars[i].AttributeStatus[j] = DISK_STATUS_BAD;
 			error++;
 		}
 		else if((
@@ -11706,7 +11705,6 @@ DWORD CAtaSmart::CheckDiskStatus(DWORD i)
 		&&	vars[i].Threshold[j].ThresholdValue != 0
 		&& 	vars[i].Attribute[j].CurrentValue < vars[i].Threshold[j].ThresholdValue)
 		{
-			vars[i].AttributeStatus[j] = DISK_STATUS_BAD;
 			error++;
 		}
 
@@ -11744,7 +11742,6 @@ DWORD CAtaSmart::CheckDiskStatus(DWORD i)
 				}
 				if(threshold > 0 && raw >= threshold && ! vars[i].IsSsd)
 				{
-					vars[i].AttributeStatus[j] = DISK_STATUS_CAUTION;
 					caution = 1;
 				}
 			}
@@ -11799,12 +11796,10 @@ DWORD CAtaSmart::CheckDiskStatus(DWORD i)
 			else if(life == 0 || (! (vars[i].FlagLifeRawValue || vars[i].FlagLifeRawValueIncrement) && life < vars[i].Threshold[j].ThresholdValue))
 			{
 				error = 1;
-				vars[i].AttributeStatus[j] = DISK_STATUS_BAD;
 			}
 			else if(life <= vars[i].ThresholdFF)
 			{
 				caution = 1;
-				vars[i].AttributeStatus[j] = DISK_STATUS_CAUTION;
 			}
 		}
 		else if(vars[i].Attribute[j].Id == 0xE6 && (vars[i].DiskVendorId == SSD_VENDOR_WDC || vars[i].DiskVendorId == SSD_VENDOR_SANDISK))
@@ -11834,12 +11829,10 @@ DWORD CAtaSmart::CheckDiskStatus(DWORD i)
 			else if (life == 0)
 			{
 				error = 1;
-				vars[i].AttributeStatus[j] = DISK_STATUS_BAD;
 			}
 			else if(life <= vars[i].ThresholdFF)
 			{
 				caution = 1;
-				vars[i].AttributeStatus[j] = DISK_STATUS_CAUTION;
 			}
 		}
 		else if (
@@ -11858,12 +11851,10 @@ DWORD CAtaSmart::CheckDiskStatus(DWORD i)
 			if (life == 0)
 			{
 				error = 1;
-				vars[i].AttributeStatus[j] = DISK_STATUS_BAD;
 			}
 			else if (life <= vars[i].ThresholdFF)
 			{
 				caution = 1;
-				vars[i].AttributeStatus[j] = DISK_STATUS_CAUTION;
 			}
 		}
 	}
