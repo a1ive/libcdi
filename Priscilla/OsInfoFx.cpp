@@ -451,7 +451,7 @@ DWORD GetIeVersion()
 
 void GetOsName(CString& OsFullName)
 {
-	CString osName, osType, osCsd, osVersion, osBuild, osFullName, osArchitecture;
+	CString osName, osType, osCsd, osVersion, osBuild, osFullName, osArchitecture, osDisplayVersion;
 	CString cstr;
 
 	OSVERSIONINFOEX osvi = { sizeof(osvi), 0, 0, 0, 0, {0}, 0, 0 };
@@ -592,7 +592,11 @@ void GetOsName(CString& OsFullName)
 		{
 			if (osvi.wProductType != VER_NT_WORKSTATION)
 			{
-				if (osvi.dwBuildNumber >= 20344)
+				if (osvi.dwBuildNumber >= 26040)
+				{
+					osName = L"Windows Server 2025";
+				}
+				else if (osvi.dwBuildNumber >= 20344)
 				{
 					osName = L"Windows Server 2022";
 				}
@@ -726,23 +730,23 @@ void GetOsName(CString& OsFullName)
 					osType = L"Web Server";
 					break;
 				case PRODUCT_PROFESSIONAL:
-					if(osvi.dwMinorVersion >= 2)
-					{
-						osType = L"Pro";
-					}
-					else
+					if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion <= 2)
 					{
 						osType = L"Professional";
 					}
+					else
+					{
+						osType = L"Pro";
+					}
 					break;
 				case PRODUCT_PROFESSIONAL_N:
-					if(osvi.dwMinorVersion >= 2)
+					if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion <= 2)
 					{
-						osType = L"Pro N";
+						osType = L"Professional N"; 
 					}
 					else
 					{
-						osType = L"Professional N";
+						osType = L"Pro N";
 					}
 					break;
 				case PRODUCT_PRO_WORKSTATION:
@@ -849,6 +853,28 @@ void GetOsName(CString& OsFullName)
 		osCsd = osvi.szCSDVersion;
 		osCsd.Replace(L"Service Pack ", L"SP");
 
+		if (osvi.dwMajorVersion >= 10)
+		{
+			DWORD value = 0;
+			DWORD type = REG_SZ;
+			TCHAR str[256];
+			ULONG size = 256 * sizeof(TCHAR);
+			HKEY  hKey = NULL;
+
+			if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+			{
+				if (RegQueryValueExW(hKey, L"DisplayVersion", NULL, &type, (LPBYTE)str, &size) == ERROR_SUCCESS)
+				{
+					osDisplayVersion = str;
+				}
+
+				if (osDisplayVersion.IsEmpty() && RegQueryValueExW(hKey, L"ReleaseId", NULL, &type, (LPBYTE)str, &size) == ERROR_SUCCESS)
+				{
+					osDisplayVersion = str;
+				}
+			}
+		}
+
 		osVersion.Format(L"%d.%d", osvi.dwMajorVersion, osvi.dwMinorVersion);
 		osBuild.Format(L"%d", osvi.dwBuildNumber);
 
@@ -873,7 +899,11 @@ void GetOsName(CString& OsFullName)
 			osArchitecture = L"x86";
 		}
 
-		if(! osCsd.IsEmpty())
+		if (! osDisplayVersion.IsEmpty())
+		{
+			osFullName.Format(L"%s %s %s [%s Build %s] (%s)", (LPCTSTR)osName, (LPCTSTR)osType, (LPCTSTR)osDisplayVersion, (LPCTSTR)osVersion, (LPCTSTR)osBuild, (LPCTSTR)osArchitecture);
+		}
+		else if(! osCsd.IsEmpty())
 		{
 			osFullName.Format(L"%s %s %s [%s Build %s] (%s)", (LPCTSTR)osName, (LPCTSTR)osType, (LPCTSTR)osCsd, (LPCTSTR)osVersion, (LPCTSTR)osBuild, (LPCTSTR)osArchitecture);
 		}

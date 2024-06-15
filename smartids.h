@@ -407,6 +407,7 @@ static SMART_NAME SMART_NAME_SmartOcz[] =
 	{0xFB, L"NAND Read Count"},
 	{0xF1, L"Total Host Writes"},
 	{0xF2, L"Total Host Reads"},
+	{0xF9, L"Total NAND Writes"},
 };
 
 static SMART_NAME SMART_NAME_SmartPlextor[] =
@@ -515,8 +516,8 @@ static SMART_NAME SMART_NAME_SmartCorsair[] =
 	{0xC2, L"Temperature"},
 	{0xC4, L"Reallocation Event Count"},
 	{0xE7, L"SSD Life Left"},
-	{0xF1, L"Lifetime GB Written"},
-	{0xF2, L"Lifetime GB Read"},
+	{0xF1, L"Lifetime Written"},
+	{0xF2, L"Lifetime Read"},
 };
 
 static SMART_NAME SMART_NAME_SmartToshiba[] =
@@ -1478,6 +1479,58 @@ static SMART_NAME SMART_NAME_SmartSanDiskCloud[] =
 	{0xFD, L"SPI Tests Remaining"},
 };
 
+static SMART_NAME SMART_NAME_SmartSiliconMotionCVC[] =
+{
+	{0x05, L"Re-Assigned Count"},
+	{0x09, L"Power-On Hours Count"},
+	{0x0C, L"Drive Power Cycle Count"},
+	{0xA5, L"SLC Cache"},
+	{0xAA, L"Grown Bad Block Count"},
+	{0xAB, L"Program Fail Count"},
+	{0xAC, L"Erase Fail Count"},
+	{0xAD, L"Avg Erase Count"},
+	{0xAE, L"Unexpected Power Loss Count"},
+	{0xAF, L"Program Fail Count (Worst case)"},
+	{0xB7, L"Total SATA Link Speed Downshift"},
+	{0xB8, L"End-to-End Data Errors corrected"},
+	{0xBB, L"Uncorrectable Errors"},
+	{0xBD, L"Max Erase Count"},
+	{0xBE, L"Temperature"},
+	{0xBF, L"Min Erase Count"},
+	{0xC3, L"Read Error Rate"},
+	{0xC6, L"Off-Line Scan Uncorrectable Sector Count"},
+	{0xC7, L"SATA CRC Error Count"},
+	{0xCA, L"SSD Life Left"},
+	{0xE8, L"Total Spare Counts"},
+	{0xE9, L"TLC NAND Write"},
+	{0xF1, L"Host Write"},
+	{0xF2, L"Host Read"},
+	{0x94, L"RAID Event Count"},
+	{0x95, L"RAID Uncorrectable Count"},
+	{0xA7, L"SSD Protect Mode"},
+	{0x93, L"Soft Retry Event Count"},
+	{0xEA, L"SLC NAND Write"},
+};
+
+static SMART_NAME SMART_NAME_SmartAdataIndustrial[] =
+{
+	{0x09, L"Power-On hours Count"},
+	{0x0C, L"Drive Power Cycle Count"},
+	{0xA7, L"SSD Protect Mode"},
+	{0xA8, L"SATA PHY Error Count"},
+	{0xA9, L"Bad Block Count"},
+	{0xAD, L"Erase Count"},
+	{0xAF, L"Bad Cluster Table Count"},
+	{0xB4, L"Spare block count left"},
+	{0xC0, L"Unexpected Power Loss Count"},
+	{0xC2, L"Temperature"},
+	{0xE7, L"SSD life left"},
+	{0xE9, L"Flash Write Sector Count"},
+	{0xEA, L"Flash Read Sector Count"},
+	{0xF1, L"Write Sector Count"},
+	{0xF2, L"Read Sector Count"},
+};
+
 static struct
 {
 	LPCWSTR group;
@@ -1534,4 +1587,6 @@ static struct
 	{L"SmartSanDiskLenovoHelenVenus", SMART_NAME_SmartSanDiskLenovoHelenVenus, ARRAYSIZE(SMART_NAME_SmartSanDiskLenovoHelenVenus)},
 	{L"SmartMicronMU03", SMART_NAME_SmartMicronMU03, ARRAYSIZE(SMART_NAME_SmartMicronMU03)},
 	{L"SmartSanDiskCloud", SMART_NAME_SmartSanDiskCloud, ARRAYSIZE(SMART_NAME_SmartSanDiskCloud)},
+	{L"SmartSiliconMotionCVC", SMART_NAME_SmartSiliconMotionCVC, ARRAYSIZE(SMART_NAME_SmartSiliconMotionCVC)},
+	{L"SmartAdataIndustrial", SMART_NAME_SmartAdataIndustrial, ARRAYSIZE(SMART_NAME_SmartAdataIndustrial)},
 };
