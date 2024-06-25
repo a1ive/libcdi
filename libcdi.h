@@ -3,7 +3,7 @@
 #define VC_EXTRALEAN
 #include <windows.h>
 
-#define CDI_VERSION "9.3.1"
+#define CDI_VERSION "9.3.2"
 
 enum CDI_ATA_BOOL
 {
@@ -157,5 +157,20 @@ BYTE		WINAPI cdi_get_smart_id(CDI_SMART* ptr, INT index, INT attr);
 WCHAR*		WINAPI cdi_get_smart_value(CDI_SMART* ptr, INT index, INT attr, BOOL hex);
 INT			WINAPI cdi_get_smart_status(CDI_SMART* ptr, INT index, INT attr);
 WCHAR*		WINAPI cdi_get_smart_name(CDI_SMART* ptr, INT index, BYTE id);
+
+static inline LPCSTR
+cdi_get_health_status(enum CDI_DISK_STATUS status)
+{
+	switch (status)
+	{
+		case CDI_DISK_STATUS_GOOD:
+			return "Good";
+		case CDI_DISK_STATUS_CAUTION:
+			return "Caution";
+		case CDI_DISK_STATUS_BAD:
+			return "Bad";
+	}
+	return "Unknown";
+}
 
 #endif

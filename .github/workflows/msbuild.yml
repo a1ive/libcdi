@@ -38,6 +38,7 @@ jobs:
         md libcdi\x86
         move Win32\Release\libcdi.dll libcdi\x86\libcdi.dll
         move Win32\Release\cditest.exe libcdi\x86\cditest.exe
+        copy libcdi.h libcdi\libcdi.h
         copy LICENSE.txt libcdi\LICENSE
         copy README.txt libcdi\README.txt
 
