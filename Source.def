@@ -1,5 +1,7 @@
 LIBRARY LIBCDI
 EXPORTS
+cdi_get_version
+
 cdi_create_smart
 cdi_destroy_smart
 cdi_init_smart

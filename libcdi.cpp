@@ -6,6 +6,12 @@
 
 //#pragma comment(lib, "pathcch.lib")
 
+extern "C" CONST CHAR* WINAPI
+cdi_get_version()
+{
+	return CDI_VERSION;
+}
+
 extern "C" CDI_SMART* WINAPI
 cdi_create_smart()
 {

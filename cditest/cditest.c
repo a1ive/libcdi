@@ -129,6 +129,8 @@ enum CDI_DISK_STATUS
 
 typedef struct _CDI_SMART CDI_SMART;
 
+CONST CHAR*	(WINAPI *cdi_get_version)(VOID);
+
 CDI_SMART*	(WINAPI *cdi_create_smart)(VOID);
 VOID		(WINAPI *cdi_destroy_smart)(CDI_SMART* ptr);
 VOID		(WINAPI *cdi_init_smart)(CDI_SMART* ptr, UINT64 flags);
@@ -162,6 +164,18 @@ get_health_status(enum CDI_DISK_STATUS status)
 	return "Unknown";
 }
 
+static inline FARPROC
+get_dll_func(HMODULE dll, LPCSTR func)
+{
+	FARPROC ptr = GetProcAddress(dll, func);
+	if (ptr == NULL)
+	{
+		printf("Cannot find %s in libcdi.dll\n", func);
+		exit(-1);
+	}
+	return ptr;
+}
+
 static HMODULE
 load_cdi(void)
 {
@@ -172,43 +186,26 @@ load_cdi(void)
 		exit(-1);
 	}
 
-	*(FARPROC*)&cdi_create_smart = GetProcAddress(dll, "cdi_create_smart");
-	*(FARPROC*)&cdi_destroy_smart = GetProcAddress(dll, "cdi_destroy_smart");
-	*(FARPROC*)&cdi_init_smart = GetProcAddress(dll, "cdi_init_smart");
-	*(FARPROC*)&cdi_update_smart = GetProcAddress(dll, "cdi_update_smart");
-	*(FARPROC*)&cdi_get_disk_count = GetProcAddress(dll, "cdi_get_disk_count");
+	*(FARPROC*)&cdi_get_version = get_dll_func(dll, "cdi_get_version");
 
-	*(FARPROC*)&cdi_get_bool = GetProcAddress(dll, "cdi_get_bool");
-	*(FARPROC*)&cdi_get_int = GetProcAddress(dll, "cdi_get_int");
-	*(FARPROC*)&cdi_get_dword = GetProcAddress(dll, "cdi_get_dword");
-	*(FARPROC*)&cdi_get_string = GetProcAddress(dll, "cdi_get_string");
-	*(FARPROC*)&cdi_free_string = GetProcAddress(dll, "cdi_free_string");
+	*(FARPROC*)&cdi_create_smart = get_dll_func(dll, "cdi_create_smart");
+	*(FARPROC*)&cdi_destroy_smart = get_dll_func(dll, "cdi_destroy_smart");
+	*(FARPROC*)&cdi_init_smart = get_dll_func(dll, "cdi_init_smart");
+	*(FARPROC*)&cdi_update_smart = get_dll_func(dll, "cdi_update_smart");
+	*(FARPROC*)&cdi_get_disk_count = get_dll_func(dll, "cdi_get_disk_count");
 
-	*(FARPROC*)&cdi_get_smart_format = GetProcAddress(dll, "cdi_get_smart_format");
-	*(FARPROC*)&cdi_get_smart_id = GetProcAddress(dll, "cdi_get_smart_id");
-	*(FARPROC*)&cdi_get_smart_value = GetProcAddress(dll, "cdi_get_smart_value");
-	*(FARPROC*)&cdi_get_smart_status = GetProcAddress(dll, "cdi_get_smart_status");
-	*(FARPROC*)&cdi_get_smart_name = GetProcAddress(dll, "cdi_get_smart_name");
+	*(FARPROC*)&cdi_get_bool = get_dll_func(dll, "cdi_get_bool");
+	*(FARPROC*)&cdi_get_int = get_dll_func(dll, "cdi_get_int");
+	*(FARPROC*)&cdi_get_dword = get_dll_func(dll, "cdi_get_dword");
+	*(FARPROC*)&cdi_get_string = get_dll_func(dll, "cdi_get_string");
+	*(FARPROC*)&cdi_free_string = get_dll_func(dll, "cdi_free_string");
 
-	if (cdi_create_smart == NULL ||
-		cdi_destroy_smart == NULL ||
-		cdi_init_smart == NULL ||
-		cdi_update_smart == NULL ||
-		cdi_get_disk_count == NULL ||
-		cdi_get_bool == NULL ||
-		cdi_get_int == NULL ||
-		cdi_get_dword == NULL ||
-		cdi_get_string == NULL ||
-		cdi_free_string == NULL ||
-		cdi_get_smart_format == NULL ||
-		cdi_get_smart_id == NULL ||
-		cdi_get_smart_value == NULL ||
-		cdi_get_smart_status == NULL||
-		cdi_get_smart_name == NULL)
-	{
-		printf("Cannot find functions in libcdi.dll\n");
-		exit(-1);
-	}
+	*(FARPROC*)&cdi_get_smart_format = get_dll_func(dll, "cdi_get_smart_format");
+	*(FARPROC*)&cdi_get_smart_id = get_dll_func(dll, "cdi_get_smart_id");
+	*(FARPROC*)&cdi_get_smart_value = get_dll_func(dll, "cdi_get_smart_value");
+	*(FARPROC*)&cdi_get_smart_status = get_dll_func(dll, "cdi_get_smart_status");
+	*(FARPROC*)&cdi_get_smart_name = get_dll_func(dll, "cdi_get_smart_name");
+
 	(void)CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	return dll;
 }
@@ -216,6 +213,8 @@ load_cdi(void)
 static void
 unload_cdi(HMODULE dll)
 {
+	cdi_get_version = NULL;
+
 	cdi_create_smart = NULL;
 	cdi_destroy_smart = NULL;
 	cdi_init_smart = NULL;
@@ -243,6 +242,8 @@ int main(int argc, char* argv[])
 	INT i, count;
 	HMODULE dll = load_cdi();
 	CDI_SMART* smart = cdi_create_smart();
+
+	printf("CDI v%s\n", cdi_get_version());
 
 	cdi_init_smart(smart, CDI_FLAG_DEFAULT);
 	count = cdi_get_disk_count(smart);

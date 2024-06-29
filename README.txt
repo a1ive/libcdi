@@ -3,6 +3,11 @@ CrystalDiskInfo 动态链接库
 	https://github.com/hiyohiyo/CrystalDiskInfo
 	https://github.com/iTXTech/CrystalDiskInfoEmbedded
 导出函数：
+	CONST CHAR*	WINAPI cdi_get_version(VOID)
+		获取 CDI 版本
+		参数：
+		返回值：
+			返回 CDI 版本号，如 "9.0.0"。
 	CDI_SMART* WINAPI cdi_create_smart(VOID)
 		创建 SMART 数据。加载 DLL 后，应首先执行 CoInitializeEx ，再调用此函数。
 		参数：
