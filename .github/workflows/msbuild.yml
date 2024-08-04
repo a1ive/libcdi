@@ -31,24 +31,27 @@ jobs:
       run: |
         msbuild /m /p:Configuration=Release /p:platform=x64 ${{env.SOLUTION_FILE_PATH}}
         msbuild /m /p:Configuration=Release /p:platform=x86 ${{env.SOLUTION_FILE_PATH}}
-        md libcdi
-        md libcdi\x64
-        move x64\Release\libcdi.dll libcdi\x64\libcdi.dll
-        move x64\Release\cditest.exe libcdi\x64\cditest.exe
-        md libcdi\x86
-        move Win32\Release\libcdi.dll libcdi\x86\libcdi.dll
-        move Win32\Release\cditest.exe libcdi\x86\cditest.exe
-        copy libcdi.h libcdi\libcdi.h
-        copy LICENSE.txt libcdi\LICENSE
-        copy README.txt libcdi\README.txt
+        msbuild /m /p:Configuration=Release /p:platform=arm64 ${{env.SOLUTION_FILE_PATH}}
+        md build
+        md build\x64
+        move x64\Release\libcdi.dll build\x64\libcdi.dll
+        move x64\Release\cditest.exe build\x64\cditest.exe
+        md build\x86
+        move Win32\Release\libcdi.dll build\x86\libcdi.dll
+        move Win32\Release\cditest.exe build\x86\cditest.exe
+        md build\ARM64
+        move ARM64\Release\libcdi.dll build\ARM64\libcdi.dll
+        move ARM64\Release\cditest.exe build\ARM64\cditest.exe
+        copy libcdi\libcdi.h build\libcdi.h
+        copy LICENSE.txt build\LICENSE
+        copy README.txt build\README.txt
 
     - name: Create ZIP
       uses: thedoctor0/zip-release@master
       with:
         type: 'zip'
         filename: 'libcdi.zip'
-        directory: '.'
-        path: 'libcdi'
+        directory: 'build'
 
     - name: Delete old release
       continue-on-error: true
@@ -61,6 +64,6 @@ jobs:
     - name: Release
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        gh release create latest libcdi.zip --latest -t "Development Build"
+        gh release create latest build\libcdi.zip --latest -t "Development Build"
       env:
         GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
