@@ -132,13 +132,15 @@ enum CDI_DISK_STATUS
 		CDI_FLAG_ENABLE_ASM1352R \
 	)
 
-#ifdef __cplusplus
-
+#ifdef LIBCDI_IMPLEMENTATION
 typedef CAtaSmart CDI_SMART;
-
 #else
-
 typedef struct _CDI_SMART CDI_SMART;
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 CONST CHAR*	WINAPI cdi_get_version(VOID);
 
@@ -175,4 +177,6 @@ cdi_get_health_status(enum CDI_DISK_STATUS status)
 	return "Unknown";
 }
 
+#ifdef __cplusplus
+}
 #endif

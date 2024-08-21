@@ -1,10 +1,10 @@
 #include "stdafx.h"
 #include "AtaSmart.h"
 #include "NVMeInterpreter.h"
-#include "libcdi.h"
 #include "smartids.h"
 
-//#pragma comment(lib, "pathcch.lib")
+#define LIBCDI_IMPLEMENTATION
+#include "libcdi.h"
 
 extern "C" CONST CHAR* WINAPI
 cdi_get_version()
