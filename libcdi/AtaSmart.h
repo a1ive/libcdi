@@ -34,6 +34,7 @@ static const TCHAR* commandTypeString[] =
 	_T("jm"),
 	_T("cy"),
 	_T("ar"), // ASM1352R
+	_T("rr"), // Realtek 9220DP
 	_T("cs"),
 	_T("cp"),
 	_T("wm"),
@@ -49,7 +50,8 @@ static const TCHAR* commandTypeString[] =
 	_T("rc"), // +AMD RC2
 	_T("j5"), // JMS56X
 	_T("j3"), // JMB39X
-	_T("j6"), // JMS586
+	_T("j6"), // JMS586_20
+	_T("j4"), // JMS586_40
 	_T("dg"), // Debug
 };
 
@@ -337,6 +339,7 @@ public:
 		CMD_TYPE_JMICRON,
 		CMD_TYPE_CYPRESS,
 		CMD_TYPE_SAT_ASM1352R,	// AMS1352 2nd drive
+		CMD_TYPE_SAT_REALTEK9220DP,
 		CMD_TYPE_CSMI,				// CSMI = Common Storage Management Interface
 		CMD_TYPE_CSMI_PHYSICAL_DRIVE, // CSMI = Common Storage Management Interface 
 		CMD_TYPE_WMI,
@@ -346,13 +349,15 @@ public:
 		CMD_TYPE_NVME_JMICRON,
 		CMD_TYPE_NVME_ASMEDIA,
 		CMD_TYPE_NVME_REALTEK,
+		CMD_TYPE_NVME_REALTEK9220DP,
 		CMD_TYPE_NVME_INTEL_RST,
 		CMD_TYPE_NVME_INTEL_VROC,
 		CMD_TYPE_MEGARAID,
 		CMD_TYPE_AMD_RC2,// +AMD_RC2
 		CMD_TYPE_JMS56X,
 		CMD_TYPE_JMB39X,
-		CMD_TYPE_JMS586,
+		CMD_TYPE_JMS586_20,
+		CMD_TYPE_JMS586_40,
 		CMD_TYPE_DEBUG
 	};
 
@@ -1954,11 +1959,13 @@ public:
 	BOOL FlagMegaRAID = FALSE;
 	BOOL FlagIntelVROC = FALSE;
 	BOOL FlagUsbASM1352R = FALSE;
+	BOOL FlagUsbRealtek9220DP = FALSE;
 	BOOL FlagAMD_RC2 = FALSE;// +AMD_RC2
 #ifdef JMICRON_USB_RAID_SUPPORT
 	BOOL FlagUsbJMS56X = FALSE;
 	BOOL FlagUsbJMB39X = FALSE;
-	BOOL FlagUsbJMS586 = FALSE;
+	BOOL FlagUsbJMS586_20 = FALSE;
+	BOOL FlagUsbJMS586_40 = FALSE;
 #endif
 	BOOL FlagNoWakeUp = FALSE;// +M 20211216
 
@@ -1970,7 +1977,8 @@ protected:
 
 	HMODULE hJMS56X{};
 	HMODULE hJMB39X{};
-	HMODULE hJMS586{};
+	HMODULE hJMS586_20{};
+	HMODULE hJMS586_40{};
 	// 2023/02/24 Compatible with SIV
 	HANDLE hMutexJMicron{};
 	HANDLE CreateWorldMutex(CONST TCHAR* name);
@@ -2010,10 +2018,7 @@ protected:
 	BOOL ReadLogExtPd(INT physicalDriveId, BYTE target, BYTE logAddress, BYTE logPage, PBYTE data, DWORD dataSize);
 
 	BOOL AddDiskNVMe(INT PhysicalDriveId, INT ScsiPort, INT scsiTargetId, INT scsiBus, BYTE target, COMMAND_TYPE commandType, 
-		IDENTIFY_DEVICE* identify, DWORD* diskSize = NULL, CString pnpDeviceId = _T("")
-#ifdef JMICRON_USB_RAID_SUPPORT
-		, NVME_PORT* nvmePort = NULL
-#endif
+		IDENTIFY_DEVICE* identify, DWORD* diskSize = NULL, CString pnpDeviceId = _T(""), NVME_PORT_20* nvmePort20 = NULL, NVME_PORT_40* nvmePort40 = NULL
 	);
 
 	BOOL DoIdentifyDeviceNVMeJMicron(INT physicalDriveId, INT scsiPort, INT scsiTargetId, IDENTIFY_DEVICE* identify, BOOL flagUSB2mode);
@@ -2024,6 +2029,10 @@ protected:
 	
 	BOOL DoIdentifyDeviceNVMeRealtek(INT physicalDriveId, INT scsiPort, INT scsiTargetId, IDENTIFY_DEVICE* data);
 	BOOL GetSmartAttributeNVMeRealtek(INT physicalDriveId, INT scsiPort, INT scsiTargetId, ATA_SMART_INFO* asi);
+
+	BOOL GetSmartAttributeNVMeRealtek9220DP(INT physicalDriveId, INT scsiPort, INT scsiTargetId, ATA_SMART_INFO* asi);
+	BOOL RealtekRAIDMode(INT physicalDriveId, INT scsiPort, INT scsiTargetId);
+	BOOL RealtekSwitchMode(INT physicalDriveId, INT scsiPort, INT scsiTargetId, INT dir, INT mode);
 
 	BOOL DoIdentifyDeviceNVMeSamsung(INT physicalDriveId, INT scsiPort, INT scsiTargetId, IDENTIFY_DEVICE* identify);
 	BOOL GetSmartAttributeNVMeSamsung(INT physicalDriveId, INT scsiPort, INT scsiTargetId, ATA_SMART_INFO* asi);
@@ -2091,13 +2100,19 @@ protected:
 	BOOL DoIdentifyDeviceJMB39X(INT index, BYTE port, IDENTIFY_DEVICE* identify);
 	BOOL GetSmartInfoJMB39X(INT index, BYTE port, ATA_SMART_INFO* asi);
 
-	BOOL AddDiskJMS586(INT index);
-	BOOL DoIdentifyDeviceJMS586(INT index, BYTE port, IDENTIFY_DEVICE* identify);
-	BOOL GetSmartInfoJMS586(INT index, BYTE port, ATA_SMART_INFO* asi);
+	BOOL AddDiskJMS586_20(INT index);
+	BOOL DoIdentifyDeviceJMS586_20(INT index, BYTE port, IDENTIFY_DEVICE* identify);
+	BOOL GetSmartInfoJMS586_20(INT index, BYTE port, ATA_SMART_INFO* asi);
+	BOOL GetNVMePortInfoJMS586_20(INT index, BYTE port, NVME_PORT_20* nvmePort);
+	BOOL GetNVMeSmartInfoJMS586_20(INT index, BYTE port, UNION_SMART_ATTRIBUTE* smartInfo);
+	BOOL GetSmartAttributeNVMeJMS586_20(INT index, INT port, ATA_SMART_INFO* asi);
 
-	BOOL GetNVMePortInfoJMS586(INT index, BYTE port, NVME_PORT* nvmePort);
-	BOOL GetNVMeSmartInfoJMS586(INT index, BYTE port, UNION_SMART_ATTRIBUTE* smartInfo);
-	BOOL CAtaSmart::GetSmartAttributeNVMeJMS586(INT index, INT port, ATA_SMART_INFO* asi);
+	BOOL AddDiskJMS586_40(INT index);
+	BOOL DoIdentifyDeviceJMS586_40(INT index, BYTE port, IDENTIFY_DEVICE* identify);
+	BOOL GetSmartInfoJMS586_40(INT index, BYTE port, ATA_SMART_INFO* asi);
+	BOOL GetNVMePortInfoJMS586_40(INT index, BYTE port, NVME_PORT_40* nvmePort);
+	BOOL GetNVMeSmartInfoJMS586_40(INT index, BYTE port, UNION_SMART_ATTRIBUTE* smartInfo);
+	BOOL GetSmartAttributeNVMeJMS586_40(INT index, INT port, ATA_SMART_INFO* asi);
 #endif
 
 	DWORD GetTransferMode(WORD w63, WORD w76, WORD w77, WORD w88, CString &currentTransferMode, CString &maxTransferMode, CString &Interface, INTERFACE_TYPE *interfaceType);

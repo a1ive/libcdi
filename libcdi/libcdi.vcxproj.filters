@@ -65,6 +65,12 @@
     <ClInclude Include="smartids.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="JMicronUsbRaidDef.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="JMicronUsbRaidInit.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Source.def">
@@ -74,5 +80,13 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="README.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="JMicronUsbRaid32.lib">
+      <Filter>源文件</Filter>
+    </Library>
+    <Library Include="JMicronUsbRaid64.lib">
+      <Filter>源文件</Filter>
+    </Library>
   </ItemGroup>
 </Project>
