@@ -3,7 +3,7 @@
 #define VC_EXTRALEAN
 #include <windows.h>
 
-#define CDI_VERSION "9.4.0"
+#define CDI_VERSION "9.4.2"
 
 enum CDI_ATA_BOOL
 {
@@ -107,8 +107,7 @@ enum CDI_DISK_STATUS
 #define CDI_FLAG_ENABLE_INTEL_VROC		(1ULL << 23) // TRUE
 #define CDI_FLAG_ENABLE_ASM1352R		(1ULL << 24) // TRUE
 #define CDI_FLAG_ENABLE_AMD_RC2			(1ULL << 25) // FALSE
-//#define CDI_FLAG_ENABLE_JMS56X			(1ULL << 26) // FALSE
-//#define CDI_FLAG_ENABLE_JMB39X			(1ULL << 27) // FALSE
+#define CDI_FLAG_ENABLE_REALTEK_9220DP	(1ULL << 26) // FALSE
 
 #define CDI_FLAG_DEFAULT \
 	( \

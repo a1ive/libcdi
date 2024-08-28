@@ -79,14 +79,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="README.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="JMicronUsbRaid32.lib">
-      <Filter>源文件</Filter>
-    </Library>
-    <Library Include="JMicronUsbRaid64.lib">
-      <Filter>源文件</Filter>
-    </Library>
+    <Text Include="..\README.txt" />
   </ItemGroup>
 </Project>

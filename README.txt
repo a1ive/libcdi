@@ -145,6 +145,7 @@ CrystalDiskInfo 动态链接库
 	#define CDI_FLAG_ENABLE_INTEL_VROC		(1ULL << 23) // TRUE
 	#define CDI_FLAG_ENABLE_ASM1352R		(1ULL << 24) // TRUE
 	#define CDI_FLAG_ENABLE_AMD_RC2			(1ULL << 25) // FALSE
+	#define CDI_FLAG_ENABLE_REALTEK_9220DP	(1ULL << 26) // FALSE
 
 磁盘属性 (BOOL)：
 	enum CDI_ATA_BOOL

@@ -180,11 +180,7 @@
     <None Include="Source.def" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="README.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="JMicronUsbRaid32.lib" />
-    <Library Include="JMicronUsbRaid64.lib" />
+    <Text Include="..\README.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
