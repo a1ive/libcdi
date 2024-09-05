@@ -18,8 +18,16 @@
     <ClCompile Include="cditest.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="disklib.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="disklib.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
