@@ -6,6 +6,7 @@
 #include "../libcdi/libcdi.h"
 #include "disklib.h"
 #pragma comment(lib, "libcdi.lib")
+#pragma comment(lib, "setupapi.lib")
 
 static INT
 GetSmartIndex(CDI_SMART* cdiSmart, DWORD dwId)
