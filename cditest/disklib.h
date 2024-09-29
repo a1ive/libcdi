@@ -4,6 +4,10 @@
 #define VC_EXTRALEAN
 #include <windows.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define DISK_PROP_STR_LEN 42
 
 typedef struct _DISK_VOL_INFO
@@ -96,3 +100,7 @@ VOID DestoryDriveInfoList(PHY_DRIVE_INFO* pInfo, DWORD dwCount);
 VOID GetNtVersion(LPOSVERSIONINFOEXW osInfo);
 LPCSTR Ucs2ToUtf8(LPCWSTR src);
 LPCSTR GetHumanSize(UINT64 ullSize, UINT64 ullBase);
+
+#ifdef __cplusplus
+}
+#endif
