@@ -205,7 +205,7 @@ CrystalDiskInfo 动态链接库
 磁盘属性 (WCHAR*)：
 	enum CDI_ATA_STRING
 	{
-		CDI_STRING_SN, // 序列号
+		CDI_STRING_SN = 0, // 序列号
 		CDI_STRING_FIRMWARE, // 固件
 		CDI_STRING_MODEL, // 型号
 		CDI_STRING_DRIVE_MAP, // 盘符列表
