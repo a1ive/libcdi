@@ -59,7 +59,6 @@ cdi_init_smart(CDI_SMART * ptr, UINT64 flags)
 	ptr->FlagUsbJmicron = check_flag(flags, CDI_FLAG_ENABLE_USB_JMICRON);
 	ptr->FlagUsbCypress = check_flag(flags, CDI_FLAG_ENABLE_USB_CYPRESS);
 	ptr->FlagUsbMemory = check_flag(flags, CDI_FLAG_ENABLE_USB_MEMORY);
-	ptr->FlagUsbNVMeJMicron3 = check_flag(flags, CDI_FLAG_ENABLE_NVME_JMICRON3);
 	ptr->FlagUsbNVMeJMicron = check_flag(flags, CDI_FLAG_ENABLE_NVME_JMICRON);
 	ptr->FlagUsbNVMeASMedia = check_flag(flags, CDI_FLAG_ENABLE_NVME_ASMEDIA);
 	ptr->FlagUsbNVMeRealtek = check_flag(flags, CDI_FLAG_ENABLE_NVME_REALTEK);

@@ -33,6 +33,9 @@
     <ClCompile Include="Priscilla\UtilityFx.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Priscilla\md5.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AtaSmart.h">
@@ -69,6 +72,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="JMicronUsbRaidInit.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Priscilla\md5.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
