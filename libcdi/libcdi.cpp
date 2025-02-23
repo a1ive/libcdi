@@ -6,16 +6,24 @@
 #define LIBCDI_IMPLEMENTATION
 #include "libcdi.h"
 
+#include "UtilityFx.h"
+
 extern "C" CONST CHAR* WINAPI
 cdi_get_version()
 {
 	return CDI_VERSION;
 }
 
+#define DEBUG_MODE_NONE		0U
+#define DEBUG_MODE_LOG		1U
+#define DEBUG_MODE_MESSAGE	2U
+
+#define DEBUG_MODE DEBUG_MODE_NONE
+
 extern "C" CDI_SMART* WINAPI
 cdi_create_smart()
 {
-	//SetDebugMode(1);
+	SetDebugMode(DEBUG_MODE);
 	//(void)CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 	return new CDI_SMART;
 }
