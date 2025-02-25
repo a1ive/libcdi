@@ -1524,7 +1524,7 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 					goto safeRelease;
 				}
 
-				while(SUCCEEDED(pEnumCOMDevs->Next(10, 1, &pCOMDev, &uReturned)))
+				while(SUCCEEDED(pEnumCOMDevs->Next(10000, 1, &pCOMDev, &uReturned)))
 				{
 					if(uReturned != 1)
 					{
