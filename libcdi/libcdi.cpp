@@ -74,7 +74,8 @@ cdi_init_smart(CDI_SMART * ptr, UINT64 flags)
 		check_flag(flags, CDI_FLAG_WORKAROUND_HD204UI),
 		check_flag(flags, CDI_FLAG_WORKAROUND_ADATA),
 		check_flag(flags, CDI_FLAG_HIDE_NO_SMART),
-		check_flag(flags, CDI_FLAG_SORT_DRIVE_LETTER));
+		check_flag(flags, CDI_FLAG_SORT_DRIVE_LETTER),
+		check_flag(flags, CDI_FLAG_HIDE_RAID_VOLUME));
 	for (INT i = 0; i < ptr->vars.GetCount(); i++)
 	{
 		if (ptr->vars[i].IsSsd)

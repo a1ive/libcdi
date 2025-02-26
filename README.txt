@@ -119,14 +119,14 @@ CrystalDiskInfo 动态链接库
 			SMART 属性的名称。使用 cdi_free_string 释放内存。
 
 磁盘处理选项
-	#define CDI_FLAG_USE_WMI				(1ULL << 0) // TRUE
-	#define CDI_FLAG_ADVANCED_SEARCH		(1ULL << 1) // FALSE
-	#define CDI_FLAG_WORKAROUND_HD204UI		(1ULL << 2) // FALSE
-	#define CDI_FLAG_WORKAROUND_ADATA		(1ULL << 3) // FALSE
-	#define CDI_FLAG_HIDE_NO_SMART			(1ULL << 4) // FALSE
-	#define CDI_FLAG_SORT_DRIVE_LETTER		(1ULL << 5) // FALSE
-	#define CDI_FLAG_NO_WAKEUP				(1ULL << 6) // FALSE
-	#define CDI_FLAG_ATA_PASS_THROUGH		(1ULL << 7) // TRUE
+	#define CDI_FLAG_USE_WMI				(1ULL << 0)  // TRUE
+	#define CDI_FLAG_ADVANCED_SEARCH		(1ULL << 1)  // FALSE
+	#define CDI_FLAG_WORKAROUND_HD204UI		(1ULL << 2)  // FALSE
+	#define CDI_FLAG_WORKAROUND_ADATA		(1ULL << 3)  // FALSE
+	#define CDI_FLAG_HIDE_NO_SMART			(1ULL << 4)  // FALSE
+	#define CDI_FLAG_SORT_DRIVE_LETTER		(1ULL << 5)  // FALSE
+	#define CDI_FLAG_NO_WAKEUP				(1ULL << 6)  // FALSE
+	#define CDI_FLAG_ATA_PASS_THROUGH		(1ULL << 7)  // TRUE
 	#define CDI_FLAG_ENABLE_NVIDIA			(1ULL << 8)  // TRUE
 	#define CDI_FLAG_ENABLE_MARVELL			(1ULL << 9)  // TRUE
 	#define CDI_FLAG_ENABLE_USB_SAT			(1ULL << 10) // TRUE
@@ -146,6 +146,8 @@ CrystalDiskInfo 动态链接库
 	#define CDI_FLAG_ENABLE_ASM1352R		(1ULL << 24) // TRUE
 	#define CDI_FLAG_ENABLE_AMD_RC2			(1ULL << 25) // FALSE
 	#define CDI_FLAG_ENABLE_REALTEK_9220DP	(1ULL << 26) // FALSE
+
+	#define CDI_FLAG_HIDE_RAID_VOLUME		(1ULL << 27) // TRUE
 
 磁盘属性 (BOOL)：
 	enum CDI_ATA_BOOL
