@@ -539,7 +539,7 @@ void GetOsName(CString& osFullName, CString& name, CString& version, CString& ar
 		osFullName.Format(_T("%s [%s Build %s]"), (LPCTSTR)osName, (LPCTSTR)osVersion, (LPCTSTR)osBuild);
 
 		name = osName;
-		version = osVersion;
+		version.Format(_T("%s Build %s"), (LPCTSTR)osVersion, (LPCTSTR)osBuild);
 		architecture = _T("x86");
 
 		return;
@@ -554,12 +554,19 @@ void GetOsName(CString& osFullName, CString& name, CString& version, CString& ar
 		OSVERSIONINFOEX osvi = { sizeof(osvi), 0, 0, 0, 0, {0}, 0, 0 };
 		GetVersionEx((OSVERSIONINFO*)&osvi);
 	#endif
-
 #else
 	OSVERSIONINFOEXW osviw = { sizeof(osviw), 0, 0, 0, 0, {0}, 0, 0 };
 	OSVERSIONINFOEX osvi = { sizeof(osvi), 0, 0, 0, 0, {0}, 0, 0 };
 
 	GetVersionEx((OSVERSIONINFO*)&osvi);
+	if (osvi.dwMajorVersion == 0) // Windows NT 3.51, NT 4.0 SP4 or earlier
+	{
+		osvi.dwMajorVersion = osv.dwMajorVersion;
+		osvi.dwMinorVersion = osv.dwMinorVersion;
+		osvi.dwBuildNumber = osv.dwBuildNumber;
+		osvi.dwPlatformId = osv.dwPlatformId;
+		wsprintf(osvi.szCSDVersion, osv.szCSDVersion);
+	}
 
 	if (osvi.dwMajorVersion >= 6 && GetVersionFx((OSVERSIONINFOEXW*)&osviw))
 	{
@@ -877,6 +884,28 @@ void GetOsName(CString& osFullName, CString& name, CString& version, CString& ar
 					}
 				}
 			}
+			else if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 0)
+			{
+				if (osvi.wProductType == VER_NT_WORKSTATION)
+				{
+					osType = _T("Professional");
+				}
+				else if (osvi.wProductType == VER_NT_SERVER || osvi.wProductType == VER_NT_DOMAIN_CONTROLLER)
+				{
+					if (osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
+					{
+						osType = _T("Advanced Server");
+					}
+					else if (osvi.wSuiteMask & VER_SUITE_DATACENTER)
+					{
+						osType = _T("Datacenter Server");
+					}
+					else
+					{
+						osType = _T("Server");
+					}
+				}
+			}
 			else if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion >= 1)
 			{
 				if (osvi.wSuiteMask & VER_SUITE_PERSONAL)
@@ -1052,6 +1081,8 @@ void GetOsName(CString& osFullName, CString& name, CString& version, CString& ar
 			architecture = osArchitecture;
 		}	
 	}
+
+	osFullName.Replace(_T("  "), _T(" "));
 }
 
 //------------------------------------------------
