@@ -77,8 +77,10 @@ PrintSmartInfo(CDI_SMART* cdiSmart, PHY_DRIVE_INFO* pdInfo, INT nIndex)
 	n = cdi_get_dword(cdiSmart, nIndex, CDI_DWORD_ATTR_COUNT);
 	for (INT j = 0; j < (INT)n; j++)
 	{
-		str = cdi_get_smart_value(cdiSmart, nIndex, j, FALSE);
 		id = cdi_get_smart_id(cdiSmart, nIndex, j);
+		if (id == 0x00)
+			continue;
+		str = cdi_get_smart_value(cdiSmart, nIndex, j, FALSE);
 		printf("\t%02X %7s %-24s",
 			id,
 			cdi_get_health_status(cdi_get_smart_status(cdiSmart, nIndex, j)),
