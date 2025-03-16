@@ -629,6 +629,20 @@ static SMART_NAME SMART_NAME_SmartNVMe[] =
 	{0x0D, L"Unsafe Shutdowns"},
 	{0x0E, L"Media and Data Integrity Errors"},
 	{0x0F, L"Number of Error Information Log Entries"},
+	{0x10, L"Warning Composite Temperature Time"},
+	{0x11, L"Critical Composite Temperature Time"},
+	{0x12, L"Temperature Sensor 1"},
+	{0x13, L"Temperature Sensor 2"},
+	{0x14, L"Temperature Sensor 3"},
+	{0x15, L"Temperature Sensor 4"},
+	{0x16, L"Temperature Sensor 5"},
+	{0x17, L"Temperature Sensor 6"},
+	{0x18, L"Temperature Sensor 7"},
+	{0x19, L"Temperature Sensor 8"},
+	{0x1A, L"Thermal Management Temperature 1 Transition Count"},
+	{0x1B, L"Thermal Management Temperature 2 Transition Count"},
+	{0x1C, L"Total Time For Thermal Management Temperature 1"},
+	{0x1D, L"Total Time For Thermal Management Temperature 2"},
 };
 
 static SMART_NAME SMART_NAME_SmartRealtek[] =
