@@ -171,11 +171,13 @@
     <ClInclude Include="Priscilla\md5.h" />
     <ClInclude Include="Priscilla\OsInfoFx.h" />
     <ClInclude Include="Priscilla\UtilityFx.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="SlotSpeedGetter.h" />
     <ClInclude Include="smartids.h" />
     <ClInclude Include="SPTIUtil.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="StorageQuery.h" />
+    <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -183,6 +185,9 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\README.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

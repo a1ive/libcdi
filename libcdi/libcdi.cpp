@@ -8,10 +8,12 @@
 
 #include "UtilityFx.h"
 
+#include "version.h"
+
 extern "C" CONST CHAR* WINAPI
 cdi_get_version()
 {
-	return CDI_VERSION;
+	return QUOTE(LIBCDI_MAJOR_VERSION.LIBCDI_MINOR_VERSION.LIBCDI_MICRO_VERSION);
 }
 
 #define DEBUG_MODE_NONE		0U
