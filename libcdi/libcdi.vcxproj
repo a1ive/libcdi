@@ -31,7 +31,7 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <DisableAdvancedSupport>true</DisableAdvancedSupport>
-    <SupportLTL>true</SupportLTL>
+    <SupportLTL>msvcrt</SupportLTL>
     <CleanImport>true</CleanImport>
     <WindowsTargetPlatformMinVersion>5.1.2600.0</WindowsTargetPlatformMinVersion>
     <YY_Thunks_File>YY_Thunks_for_WinXP.obj</YY_Thunks_File>
@@ -43,7 +43,7 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <DisableAdvancedSupport>true</DisableAdvancedSupport>
-    <SupportLTL>true</SupportLTL>
+    <SupportLTL>msvcrt</SupportLTL>
     <CleanImport>true</CleanImport>
     <WindowsTargetPlatformMinVersion>5.1.2600.0</WindowsTargetPlatformMinVersion>
     <YY_Thunks_File>YY_Thunks_for_WinXP.obj</YY_Thunks_File>
@@ -107,6 +107,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
+      <EntryPointSymbol>DllMainCRTStartupForYY_Thunks</EntryPointSymbol>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -129,6 +130,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
+      <EntryPointSymbol>DllMainCRTStartupForYY_Thunks</EntryPointSymbol>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
@@ -151,6 +153,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
