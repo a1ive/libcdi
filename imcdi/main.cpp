@@ -184,7 +184,7 @@ private:
 				isLoading = true;
 				{
 					std::lock_guard<std::mutex> lock(dataMutex);
-					if (cdiSmart && diskIndexToUpdate < diskInfo.size())
+					if (cdiSmart && diskIndexToUpdate < static_cast<int>(diskInfo.size()))
 					{
 						cdi_update_smart(cdiSmart.get(), diskIndexToUpdate);
 						UpdateDiskData(diskInfo[diskIndexToUpdate], cdiSmart.get(), diskIndexToUpdate);
