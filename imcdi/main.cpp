@@ -13,6 +13,8 @@
 #include <functional>
 
 #include "../libcdi/libcdi.h"
+#include "version.h"
+#include "resource.h"
 
 #pragma comment(lib, "d3d9.lib")
 
@@ -666,7 +668,7 @@ void RenderAboutWindow(AppContext& context)
 	}
 
 	ImGui::SetWindowFontScale(2.0f);
-	ImGui::Text("ImGui Disk Info");
+	ImGui::Text(IMCDI_NAME);
 	ImGui::SetWindowFontScale(1.0f);
 	ImGui::SameLine();
 	ImGui::Text("v%s", cdi_get_version());
@@ -676,7 +678,7 @@ void RenderAboutWindow(AppContext& context)
 	ImGui::TextWrapped("A simple disk S.M.A.R.T. information utility built with Dear ImGui, using the libcdi.");
 	ImGui::Spacing();
 
-	ImGui::Text("Copyright (C) 2025 A1ive");
+	ImGui::Text("Copyright " IMCDI_COPYRIGHT);
 	ImGui::TextLinkOpenURL("https://github.com/a1ive/libcdi");
 	ImGui::Text("Based on CrystalDiskInfo by hiyohiyo:");
 	ImGui::TextLinkOpenURL("https://github.com/hiyohiyo/CrystalDiskInfo");
@@ -771,13 +773,24 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	ImGui_ImplWin32_EnableDpiAwareness();
 	context.mainScale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY));
 
-	WNDCLASSEXW wc =
-		{ sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Disk Info", nullptr };
-	::RegisterClassExW(&wc);
+	WNDCLASSW wc =
+	{
+		CS_CLASSDC,
+		WndProc,
+		0L,
+		0L,
+		hInstance,
+		LoadIconW(hInstance, MAKEINTRESOURCEW(IDI_ICON_MAIN)),
+		LoadCursorW(NULL, IDC_ARROW),
+		nullptr,
+		nullptr,
+		L"" IMCDI_NAME
+	};
+	::RegisterClassW(&wc);
 
 	HWND hWnd = ::CreateWindowW(
 		wc.lpszClassName,
-		L"ImGui Disk Info",
+		L"" IMCDI_NAME,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
@@ -790,7 +803,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	);
 
 	// Associate the AppContext pointer with the window handle.
-	SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(&context));
+	SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(&context));
 
 	if (!CreateDeviceD3D(hWnd, context.graphics))
 	{
@@ -866,7 +879,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 		if (context.smartWindowOpen)
 		{
 			ImGui::SetNextWindowSize(ImVec2(700, 750), ImGuiCond_FirstUseEver);
-			ImGui::Begin("SMART Information", &context.smartWindowOpen, ImGuiWindowFlags_MenuBar);
+			ImGui::Begin("SMART Information", &context.smartWindowOpen, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse);
 
 			RenderMenuBar(context);
 
