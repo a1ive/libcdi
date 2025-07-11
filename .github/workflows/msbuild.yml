@@ -9,6 +9,7 @@ on:
 env:
   # Path to the solution file relative to the root of the project.
   SOLUTION_FILE_PATH: .
+  ARTIFACT_NAME: libcdi
 
 jobs:
   build:
@@ -32,26 +33,62 @@ jobs:
         msbuild /m /p:Configuration=Release /p:platform=x64 ${{env.SOLUTION_FILE_PATH}}
         msbuild /m /p:Configuration=Release /p:platform=x86 ${{env.SOLUTION_FILE_PATH}}
         msbuild /m /p:Configuration=Release /p:platform=arm64 ${{env.SOLUTION_FILE_PATH}}
-        md build
-        md build\x64
-        move x64\Release\libcdi.dll build\x64\libcdi.dll
-        move x64\Release\cditest.exe build\x64\cditest.exe
-        md build\x86
-        move Win32\Release\libcdi.dll build\x86\libcdi.dll
-        move Win32\Release\cditest.exe build\x86\cditest.exe
-        md build\ARM64
-        move ARM64\Release\libcdi.dll build\ARM64\libcdi.dll
-        move ARM64\Release\cditest.exe build\ARM64\cditest.exe
-        copy libcdi\libcdi.h build\libcdi.h
-        copy LICENSE.txt build\LICENSE
-        copy README.txt build\README.txt
 
-    - name: Create ZIP
-      uses: thedoctor0/zip-release@master
-      with:
-        type: 'zip'
-        filename: 'libcdi.zip'
-        directory: 'build'
+    - name: Stage artifacts for packaging
+      run: |
+        $executables = "libcdi.dll", "cditest.exe", "imcdi.exe"
+        $platformMap = @{
+            "x64/Release"   = "build/x64"
+            "Win32/Release" = "build/x86"
+            "ARM64/Release" = "build/arm64"
+        }
+        $platformMap.Values | ForEach-Object { New-Item -Path $_ -ItemType Directory -Force }
+        foreach ($entry in $platformMap.GetEnumerator()) {
+            foreach ($exe in $executables) {
+                Move-Item -Path "$($entry.Name)/$exe" -Destination "$($entry.Value)/"
+            }
+        }
+        Copy-Item -Path "libcdi/libcdi.h" -Destination "build/libcdi.h"
+        Copy-Item -Path "LICENSE.txt" -Destination "build/LICENSE.txt"
+        Copy-Item -Path "README.txt" -Destination "build/README.txt"
+
+    - name: Create ZIP Archive
+      run: Compress-Archive -Path build/* -DestinationPath "${{ env.ARTIFACT_NAME }}.zip"
+
+    - name: Generate Release Notes
+      id: generate_notes
+      run: |
+        $changelogLines = New-Object System.Collections.Generic.List[string]
+        if ("${{ github.event_name }}" -eq "push") {
+          Write-Host "Generating changelog from push event payload"
+          # The JSON payload must be piped to ConvertFrom-Json
+          $commits = '${{ toJSON(github.event.commits) }}' | ConvertFrom-Json
+          if ($null -ne $commits) {
+            foreach ($commit in $commits) {
+              $shortSha = $commit.id.Substring(0, 7)
+              # Take only the first line of the commit message
+              $commitMessage = ($commit.message -split "`r?`n")[0]
+              $changelogLines.Add("* $commitMessage ($shortSha) by @$($commit.author.name)")
+            }
+          }
+        }
+        else {
+          Write-Host "Generating changelog for workflow_dispatch event (latest commit)"
+          $latest_commit = git log --pretty=format:'* %s (%h) by @%an' -n 1
+          $changelogLines.Add($latest_commit)
+        }
+
+        $changelogBody = $changelogLines -join "`n"
+        if ([string]::IsNullOrWhiteSpace($changelogBody)) {
+          $changelogBody = "No new commits in this push. Automated build from commit ${{ github.sha }}."
+        }
+
+        # Use a secure way to create a multi-line environment variable
+        $delimiter = "RELEASE_NOTES_$(Get-Random)"
+        "CHANGELOG_BODY<<$delimiter" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $changelogBody | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        "$delimiter" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
 
     - name: Delete old release
       continue-on-error: true
@@ -61,9 +98,12 @@ jobs:
       env:
         GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-    - name: Release
-      working-directory: ${{env.GITHUB_WORKSPACE}}
+    - name: Create new release
       run: |
-        gh release create latest build\libcdi.zip --latest -t "Development Build"
+        $date_version = (Get-Date -Format 'yyyyMMdd') + ".${{ github.run_number }}"
+        gh release create latest "${{ env.ARTIFACT_NAME }}.zip" `
+          --latest `
+          --title "Build $date_version" `
+          --notes "${{ env.CHANGELOG_BODY }}"
       env:
-        GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
