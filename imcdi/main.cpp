@@ -658,14 +658,9 @@ void RenderAboutWindow(AppContext& context)
 	if (!context.showAboutWindow)
 		return;
 
-	const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos(mainViewport->GetWorkCenter(), ImGuiCond_FirstUseEver);
-
-	if (!ImGui::Begin("About", &context.showAboutWindow, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse))
-	{
-		ImGui::End();
+	ImGui::OpenPopup("About");
+	if (!ImGui::BeginPopupModal("About", &context.showAboutWindow, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse))
 		return;
-	}
 
 	ImGui::SetWindowFontScale(2.0f);
 	ImGui::Text(IMCDI_NAME);
@@ -691,7 +686,7 @@ void RenderAboutWindow(AppContext& context)
 	if (ImGui::Button("OK", ImVec2(buttonWidth, 0)))
 		context.showAboutWindow = false;
 
-	ImGui::End();
+	ImGui::EndPopup();
 }
 
 bool CreateDeviceD3D(HWND hWnd, GraphicsContext& context)
@@ -855,8 +850,13 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 		if (context.deviceLost)
 		{
 			HRESULT hr = context.graphics.pd3dDevice->TestCooperativeLevel();
-			if (hr == D3DERR_DEVICELOST) { ::Sleep(10); continue; }
-			if (hr == D3DERR_DEVICENOTRESET) ResetDevice(context);
+			if (hr == D3DERR_DEVICELOST)
+			{
+				::Sleep(10);
+				continue;
+			}
+			if (hr == D3DERR_DEVICENOTRESET)
+				ResetDevice(context);
 			context.deviceLost = false;
 		}
 		if (context.resizeWidth != 0 && context.resizeHeight != 0)
@@ -935,6 +935,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 			}
 
 			RenderLoadingWindow(context);
+			RenderAboutWindow(context);
 
 			ImGui::End();
 		}
@@ -943,8 +944,6 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 		{
 			done = true;
 		}
-
-		RenderAboutWindow(context);
 
 		ImGui::EndFrame();
 		context.graphics.pd3dDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
