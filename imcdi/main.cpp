@@ -552,9 +552,12 @@ void RenderDiskDetails(AppContext& context, const DiskInfo& disk)
 			ImGui::Spacing();
 			if (disk.temperature >= 0)
 			{
-				int alarmThreshold = (disk.temperatureAlarm > 0) ? disk.temperatureAlarm : 60;
+				int alarmThreshold = disk.temperatureAlarm;
+				if (alarmThreshold <= 0)
+					alarmThreshold = disk.isSsd ? 60 : 45;
+				std::string alarmStr = "Alarm: " + std::to_string(alarmThreshold) + " C";
 				CDI_DISK_STATUS tempStatus = (disk.temperature >= alarmThreshold) ? CDI_DISK_STATUS_CAUTION : CDI_DISK_STATUS_GOOD;
-				RenderInfoBox(context.mainScale, "Temperature", (std::to_string(disk.temperature) + " C").c_str(), "", tempStatus);
+				RenderInfoBox(context.mainScale, "Temperature", (std::to_string(disk.temperature) + " C").c_str(), alarmStr.c_str(), tempStatus);
 			}
 		}
 
