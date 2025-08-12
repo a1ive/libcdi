@@ -287,7 +287,6 @@ struct AppContext
 	CdiDataManager cdiManager;
 	float mainScale = 1.0f;
 	int selectedDisk = 0;
-	bool showDemoWindow = false;
 	bool smartWindowOpen = true;
 	bool saveIniFile = false;
 	bool showAboutWindow = false;
@@ -324,10 +323,6 @@ void RenderMenuBar(AppContext& context)
 
 		if (ImGui::BeginMenu("Help"))
 		{
-			if (ImGui::MenuItem("Debug"))
-			{
-				context.showDemoWindow = true;
-			}
 			if (ImGui::MenuItem("About"))
 			{
 				context.showAboutWindow = true;
@@ -486,7 +481,7 @@ void RenderSmartTable(AppContext& context, const std::string smartFormat, const 
 
 	if (ImGui::BeginTable("SMART Data", 4, tableFlags))
 	{
-		float statusColumnWidth = ImGui::GetTextLineHeight() * 1.5f; // A sensible default width
+		float statusColumnWidth = ImGui::GetTextLineHeight() * 1.5f;
 		float idColumnWidth = ImGui::CalcTextSize("FF").x + ImGui::GetStyle().CellPadding.x * 2.0f;
 
 		// Column 1: For the status indicator. It has a hidden header ("##...").
@@ -875,13 +870,10 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 		ImGui::NewFrame();
 
 		io.IniFilename = context.saveIniFile ? "imcdi.ini" : nullptr;
-		
-		if (context.showDemoWindow)
-			ImGui::ShowDemoWindow(&context.showDemoWindow);
 
 		if (context.smartWindowOpen)
 		{
-			ImGui::SetNextWindowSize(ImVec2(700, 750), ImGuiCond_FirstUseEver);
+			ImGui::SetNextWindowSize(ImVec2(600, 750), ImGuiCond_FirstUseEver);
 			ImGui::Begin("SMART Information", &context.smartWindowOpen, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse);
 
 			RenderMenuBar(context);
