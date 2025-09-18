@@ -50,7 +50,7 @@ jobs:
         }
         Copy-Item -Path "libcdi/libcdi.h" -Destination "build/libcdi.h"
         Copy-Item -Path "LICENSE.txt" -Destination "build/LICENSE.txt"
-        Copy-Item -Path "README.txt" -Destination "build/README.txt"
+        Copy-Item -Path "README.md" -Destination "build/README.md"
 
     - name: Create ZIP Archive
       run: Compress-Archive -Path build/* -DestinationPath "${{ env.ARTIFACT_NAME }}.zip"
