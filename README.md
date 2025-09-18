@@ -1,7 +1,7 @@
 ﻿
 # libcdi
 
-![GitHub License](https://img.shields.io/github/license/a1ive/libcdi)
+![GitHub License](https://img.shields.io/github/license/a1ive/libcdi) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/a1ive/libcdi/msbuild.yml)
 
 
 Dynamic library for accessing S.M.A.R.T. information, based on [CrystalDiskInfo](https://github.com/hiyohiyo/CrystalDiskInfo).
@@ -16,6 +16,10 @@ Dynamic library for accessing S.M.A.R.T. information, based on [CrystalDiskInfo]
 - [CrystalDiskInfoEmbedded](https://github.com/iTXTech/CrystalDiskInfoEmbedded)
 
 ## API Reference
+
+> [!WARNING]
+>
+> The host application that loads and calls this DLL must be run with administrator privileges.
 
 ### `CONST CHAR* WINAPI cdi_get_version(VOID)`
 Gets the CDI version.
