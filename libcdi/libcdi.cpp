@@ -105,6 +105,8 @@ inline WCHAR* cs_to_wcs(const CString& str)
 {
 	size_t len = str.GetLength() + 1;
 	auto ptr = (WCHAR*)CoTaskMemAlloc(len * sizeof(WCHAR));
+	if (ptr == nullptr)
+		AfxThrowMemoryException();
 	wcscpy_s(ptr, len, str.GetString());
 	return ptr;
 }
