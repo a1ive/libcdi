@@ -264,6 +264,8 @@ cdi_get_string(CDI_SMART * ptr, INT index, enum CDI_ATA_STRING attr)
 		return cs_to_wcs(ptr->vars[index].PnpDeviceId);
 	case CDI_STRING_SMART_KEY:
 		return cs_to_wcs(ptr->vars[index].SmartKeyName);
+	case CDI_STRING_FORM_FACTOR:
+		return cs_to_wcs(ptr->vars[index].DeviceNominalFormFactor);
 	}
 	return nullptr;
 }

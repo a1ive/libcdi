@@ -276,6 +276,7 @@ Gets the name of a S.M.A.R.T. attribute by its ID.
 - `CDI_STRING_VERSION_MINOR`: Minor version
 - `CDI_STRING_PNP_ID`: Plug and Play ID
 - `CDI_STRING_SMART_KEY`: S.M.A.R.T. Key
+- `CDI_STRING_FORM_FACTOR`: Form factor (inch)
 
 ### Disk Health Status
 `enum CDI_DISK_STATUS`

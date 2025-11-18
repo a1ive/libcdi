@@ -61,6 +61,10 @@ PrintSmartInfo(CDI_SMART* cdiSmart, PHY_DRIVE_INFO* pdInfo, INT nIndex)
 	printf("\tMax Transfer Mode: %s\n", Ucs2ToUtf8(str));
 	cdi_free_string(str);
 
+	str = cdi_get_string(cdiSmart, nIndex, CDI_STRING_FORM_FACTOR);
+	printf("\tForm Factor: %s\n", Ucs2ToUtf8(str));
+	cdi_free_string(str);
+
 	d = cdi_get_int(cdiSmart, nIndex, CDI_INT_LIFE);
 	printf("\tHealth Status: %s", cdi_get_health_status(cdi_get_int(cdiSmart, nIndex, CDI_INT_DISK_STATUS)));
 	if (d >= 0)
