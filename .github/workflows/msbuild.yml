@@ -94,16 +94,16 @@ jobs:
       continue-on-error: true
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        gh release delete latest --cleanup-tag --yes
+        gh release delete test --cleanup-tag --yes
       env:
         GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
     - name: Create new release
       run: |
         $date_version = (Get-Date -Format 'yyyyMMdd') + ".${{ github.run_number }}"
-        gh release create latest "${{ env.ARTIFACT_NAME }}.zip" `
-          --latest `
-          --title "Build $date_version" `
+        gh release create test "${{ env.ARTIFACT_NAME }}.zip" `
+          --prerelease `
+          --title "Test Build $date_version" `
           --notes "${{ env.CHANGELOG_BODY }}"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

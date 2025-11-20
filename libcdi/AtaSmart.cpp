@@ -12,6 +12,8 @@
 #include "AtaSmart.h"
 #include "Priscilla/UtilityFx.h"
 #include <wbemcli.h>
+#include <cfgmgr32.h>
+#include <vector>
 
 #include "DnpService.h"
 #include "OsInfoFx.h"
@@ -26,6 +28,7 @@
 
 #pragma comment(lib, "wbemuuid.lib")
 #define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p)=NULL; } }
+#pragma comment(lib, "cfgmgr32.lib")
 
 #ifndef safeCloseHandle
 #define safeCloseHandle(h) { if( h != NULL ) { ::CloseHandle(h); h = NULL; } }
@@ -796,90 +799,31 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 
 	if(useWmi)
 	{
-		HRESULT hRes = S_OK;
-		ULONG   uReturned = 1;
+		CONFIGRET cr;
+		std::vector<WCHAR> devIdList;
+		LPCWSTR pszIdBase = nullptr;
 
-		IWbemLocator*			pIWbemLocator = NULL;
-		IWbemServices*			pIWbemServices = NULL;
-		IEnumWbemClassObject*	pEnumCOMDevs = NULL;
-		IEnumWbemClassObject*	pEnumCOMDevs2 = NULL;
-		IWbemClassObject*		pCOMDev = NULL;
-
-		
-		DebugPrint(_T("CAtaSmart::Init WMI on - Start"));
-
-		bool initWmi = true;
-		CDnpService	cService;
-	
-		if(! cService.IsServiceRunning(_T("Winmgmt")))
+		try
 		{
-			DebugPrint(_T("Waiting... Winmgmt"));
-			initWmi = cService.EasyStart(_T("Winmgmt"));
+			ULONG cchDeviceList = 0;
+
+			cr = CM_Get_Device_ID_List_SizeW(&cchDeviceList, NULL, CM_GETIDLIST_FILTER_PRESENT);
+			if (cr != CR_SUCCESS || cchDeviceList == 0)
+				throw (DWORD)cr;
+
+			devIdList.resize(cchDeviceList);
+
+			cr = CM_Get_Device_ID_ListW(NULL, devIdList.data(), cchDeviceList, CM_GETIDLIST_FILTER_PRESENT);
+			if (cr != CR_SUCCESS)
+				throw (DWORD)cr;
+
+			pszIdBase = devIdList.data();
+
+			IsEnabledWmi = TRUE;
 		}
-
-		if(initWmi)
+		catch (...)
 		{
-			try
-			{
-			//	DebugPrint(_T("CoInitialize()"));
-			//	CoInitialize(NULL);
-				DebugPrint(_T("CoInitializeSecurity()"));
-				(void)CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT,
-					RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, NULL);
-				DebugPrint(_T("CoCreateInstance()"));
-				//CLSID_WbemAdministrativeLocator / 
-				if(FAILED(CoCreateInstance(CLSID_WbemLocator, NULL, CLSCTX_INPROC_SERVER,
-					IID_IWbemLocator, (LPVOID *)&pIWbemLocator)))
-				{
-				//	CoUninitialize();
-					DebugPrint(_T("NG:WMI Init 1"));
-				}
-				else 
-				{
-					long securityFlag = 0;
-					if(IsWindowsVersionOrGreaterFx(6, 0))
-					{
-						securityFlag = WBEM_FLAG_CONNECT_USE_MAX_WAIT;
-					}
-
-					DebugPrint(_T("ConnectServer()"));
-					if (FAILED(pIWbemLocator->ConnectServer(_bstr_t(L"\\\\.\\root\\cimv2"),
-						NULL, NULL, 0L,
-						securityFlag,
-						NULL, NULL, &pIWbemServices)))
-					{
-					//	CoUninitialize();
-						DebugPrint(_T("NG:WMI Init 2"));
-					}
-					else
-					{
-						DebugPrint(_T("CoSetProxyBlanket()"));
-						hRes = CoSetProxyBlanket(pIWbemServices, RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE,
-							NULL, RPC_C_AUTHN_LEVEL_CALL, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE);
-						if(FAILED(hRes))
-						{
-						//	CoUninitialize();
-							CString cstr;
-							cstr.Format(_T("NG:WMI Init - %08X"), hRes);
-							DebugPrint(cstr);
-						}
-						else
-						{
-							IsEnabledWmi = TRUE;
-							DebugPrint(_T("OK:WMI Init"));
-						}
-					}
-					SAFE_RELEASE(pIWbemLocator);
-				}
-			}
-			catch(...)
-			{
-				DebugPrint(_T("EX:WMI Init"));
-			}
-		}
-		else
-		{
-			DebugPrint(_T("NG:WMI Init 3"));
+			DebugPrint(_T("EX:WMI Init"));
 		}
 
 		if (IsEnabledWmi)
@@ -889,48 +833,73 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 
 			try // Workaround for AMD RAIDXpert2 
 			{// Win32_PnPSignedDriver
-				hRes = pIWbemServices->ExecQuery(_bstr_t(L"WQL"),
-					_bstr_t(L"select DeviceName, DriverVersion from Win32_PnPSignedDriver"), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumCOMDevs);
-				if (FAILED(hRes))
-				{
-					goto safeRelease;
-				}
+				LPCWSTR pszId = pszIdBase;
 				int workaround = 0;
-				while (pEnumCOMDevs && SUCCEEDED(pEnumCOMDevs->Next(10000, 1, &pCOMDev, &uReturned)) && uReturned == 1 && workaround < 512)
+
+				while (*pszId != L'\0' && workaround < 512)
 				{
+					DEVINST devInst;
+					cr = CM_Locate_DevNodeW(&devInst, (DEVINSTID_W)pszId, CM_LOCATE_DEVNODE_NORMAL);
+					pszId += wcslen(pszId) + 1;
 					workaround++;
-					VARIANT  pVal;
-					VariantInit(&pVal);
-					CString deviceName, driverVersion;
-					if (pCOMDev->Get(L"DriverVersion", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
+
+					if (cr != CR_SUCCESS)
+						continue;
+
+					WCHAR szName[256] = {};
+					ULONG cbName = sizeof(szName);
+					if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_FRIENDLYNAME, NULL, szName, &cbName, 0) != CR_SUCCESS)
 					{
-						driverVersion = pVal.bstrVal;
-						VariantClear(&pVal);
+						cbName = sizeof(szName);
+						CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_DEVICEDESC, NULL, szName, &cbName, 0);
 					}
 
-					if (pCOMDev->Get(L"DeviceName", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
+					CString deviceName(szName);
+
+					if (!deviceName.IsEmpty() && deviceName.Find(L"AMD-RAID Config") >= 0)
 					{
-						deviceName = pVal.bstrVal;
-						if (deviceName.Find(L"AMD-RAID Config") >= 0)
-						{
-							DebugPrint(deviceName + L" " + driverVersion);
-							CString cstr;
-							int major = 0, minor = 0, revision = 0, build = 0;
-							AfxExtractSubString(cstr, driverVersion, 0, L'.'); 	major = _wtoi(cstr);
-							AfxExtractSubString(cstr, driverVersion, 1, L'.'); 	minor = _wtoi(cstr);
-							AfxExtractSubString(cstr, driverVersion, 2, L'.'); 	revision = _wtoi(cstr);
-							AfxExtractSubString(cstr, driverVersion, 3, L'.'); 	build = _wtoi(cstr);
+						WCHAR szDriverKey[256] = {};
+						ULONG cbDriverKey = sizeof(szDriverKey);
+						cr = CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_DRIVER, NULL, szDriverKey, &cbDriverKey, 0);
+						if (cr != CR_SUCCESS)
+							continue;
 
-							AmdRaidDriverVersion = major * 10 + minor;
-							cstr.Format(L"driverVersion=%d.%d.%d.%d", major, minor, revision, build);
-							DebugPrint(cstr);
-							cstr.Format(L"AmdRaidDriverVersion=%d", AmdRaidDriverVersion);
-							DebugPrint(cstr);
-						}
-						VariantClear(&pVal);
+						WCHAR regPath[512] = {};
+						_snwprintf_s(regPath, _countof(regPath), _TRUNCATE, L"SYSTEM\\CurrentControlSet\\Control\\Class\\%s", szDriverKey);
+
+						HKEY hKey = NULL;
+						LONG lres = RegOpenKeyExW(HKEY_LOCAL_MACHINE, regPath, 0, KEY_READ, &hKey);
+						if (lres != ERROR_SUCCESS)
+							continue;
+
+						WCHAR szVersion[64] = {};
+						DWORD cbVersion = sizeof(szVersion);
+						DWORD dwType = 0;
+						lres = RegQueryValueExW(hKey, L"DriverVersion", NULL, &dwType, reinterpret_cast<LPBYTE>(szVersion), &cbVersion);
+						RegCloseKey(hKey);
+
+						if (lres != ERROR_SUCCESS || (dwType != REG_SZ && dwType != REG_EXPAND_SZ))
+							continue;
+
+						CString driverVersion(szVersion);
+
+						DebugPrint(deviceName + L" " + driverVersion);
+
+						CString cstr;
+						int major = 0, minor = 0, revision = 0, build = 0;
+						AfxExtractSubString(cstr, driverVersion, 0, L'.'); major = _wtoi(cstr);
+						AfxExtractSubString(cstr, driverVersion, 1, L'.'); minor = _wtoi(cstr);
+						AfxExtractSubString(cstr, driverVersion, 2, L'.'); revision = _wtoi(cstr);
+						AfxExtractSubString(cstr, driverVersion, 3, L'.'); build = _wtoi(cstr);
+
+						AmdRaidDriverVersion = major * 10 + minor;
+						cstr.Format(L"driverVersion=%d.%d.%d.%d", major, minor, revision, build);
+						DebugPrint(cstr);
+						cstr.Format(L"AmdRaidDriverVersion=%d", AmdRaidDriverVersion);
+						DebugPrint(cstr);
+
+						// break;
 					}
-
-					SAFE_RELEASE(pCOMDev);
 				}
 			}
 			catch (...)
@@ -940,121 +909,142 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 
 			try
 			{// Win32_IDEController
-				hRes = pIWbemServices->ExecQuery(_bstr_t(L"WQL"),
-					_bstr_t(L"select Name, DeviceID from Win32_IDEController"), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumCOMDevs);
-				if (FAILED(hRes))
-				{
-					goto safeRelease;
-				}
-
+				LPCWSTR pszId = pszIdBase;
 				int workaround = 0;
-				while (pEnumCOMDevs && SUCCEEDED(pEnumCOMDevs->Next(10000, 1, &pCOMDev, &uReturned)) && uReturned == 1 && workaround < 512)
+
+				while (*pszId != L'\0' && workaround < 512)
 				{
+					DEVINST devInst;
+					cr = CM_Locate_DevNodeW(&devInst, (DEVINSTID_W)pszId, CM_LOCATE_DEVNODE_NORMAL);
+					pszId += wcslen(pszId) + 1;
 					workaround++;
-					BOOL flagBlackList = FALSE;
-					VARIANT  pVal;
-					VariantInit(&pVal);
-					CString name1, deviceId, channel;
-					if (pCOMDev->Get(L"DeviceID", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
+
+					if (cr != CR_SUCCESS)
+						continue;
+
+					// CLASS = "HDC"
+					WCHAR szClass[64] = {};
+					ULONG cbClass = sizeof(szClass);
+					if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_CLASS, NULL, szClass, &cbClass, 0) != CR_SUCCESS)
+						continue;
+					if (_wcsicmp(szClass, L"HDC") == 0)
 					{
-						deviceId = pVal.bstrVal;
+						BOOL flagBlackList = FALSE;
+
+						// 取得 DeviceID
+						WCHAR szDevId[256] = {};
+						ULONG cchDevId = _countof(szDevId);
+						cr = CM_Get_Device_IDW(devInst, szDevId, cchDevId, 0);
+						if (cr != CR_SUCCESS)
+							continue;
+
+						CString deviceId(szDevId);
+						CString channel;
 						if (deviceId.Find(_T("PCIIDE\\IDECHANNEL")) == 0)
 						{
 							channel = deviceId.Right(1);
 						}
 						deviceId.Replace(_T("\\"), _T("\\\\"));
-						VariantClear(&pVal);
-					}
-					if (pCOMDev->Get(L"Name", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-					{
-						name1 = pVal.bstrVal;
+
+						WCHAR szName[256] = {};
+						ULONG cbName = sizeof(szName);
+						if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_FRIENDLYNAME, NULL, szName, &cbName, 0) != CR_SUCCESS)
+						{
+							cbName = sizeof(szName);
+							CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_DEVICEDESC, NULL, szName, &cbName, 0);
+						}
+
+						CString name1(szName);
 						if (!channel.IsEmpty())
 						{
 							name1 += _T(" (") + channel + _T(")");
 						}
 						m_IdeController.Add(name1);
-						VariantClear(&pVal);
 
-						// Black List
-					//	if(name1.Find(_T("")) == 0)
-					//	{
-					//		flagBlackList = TRUE;
-					//	}
-					}
-					SAFE_RELEASE(pCOMDev);
-
-					if (cstr.Find(name1) == -1 || cstr.Find(name1 + _T(" [ATA]")) >= 0)
-					{
-						csa.Add(cstr);
-						cstr = _T("%%%") + name1 + _T(" [ATA]");
-						cstr += _T("\r\n");
-					}
-
-					int workaroundDevice = 0;
-					CString mapping;
-					mapping.Format(_T("ASSOCIATORS OF {Win32_IDEController.DeviceID=\"%s\"} WHERE AssocClass = Win32_IDEControllerDevice"), deviceId.GetString());
-					pIWbemServices->ExecQuery(_bstr_t(L"WQL"), _bstr_t(mapping), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumCOMDevs2);
-					while (pEnumCOMDevs2 && SUCCEEDED(pEnumCOMDevs2->Next(10000, 1, &pCOMDev, &uReturned)) && uReturned == 1 && workaroundDevice < 256)
-					{
-						workaroundDevice++;
-						VARIANT pVal;
-						VariantInit(&pVal);
-						CString name2, deviceId, channel;
-						if (pCOMDev->Get(L"DeviceID", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
+						if (cstr.Find(name1) == -1 || cstr.Find(name1 + _T(" [ATA]")) >= 0)
 						{
-							deviceId = pVal.bstrVal;
-							if (deviceId.Find(_T("PCIIDE\\IDECHANNEL")) == 0)
+							csa.Add(cstr);
+							cstr = _T("%%%") + name1 + _T(" [ATA]");
+							cstr += _T("\r\n");
+						}
+
+						// Win32_IDEControllerDevice ASSOCIATORS
+						DEVINST childInst;
+						cr = CM_Get_Child(&childInst, devInst, 0);
+						int workaroundDevice = 0;
+
+						while (cr == CR_SUCCESS && workaroundDevice < 256)
+						{
+							workaroundDevice++;
+
+							CString devIdChild;
+							CString channelChild;
+
+							WCHAR szChildId[256] = {};
+							ULONG cchChildId = _countof(szChildId);
+							if (CM_Get_Device_IDW(childInst, szChildId, cchChildId, 0) == CR_SUCCESS)
 							{
-								channel = deviceId.Right(1);
+								devIdChild = szChildId;
+								if (devIdChild.Find(_T("PCIIDE\\IDECHANNEL")) == 0)
+								{
+									channelChild = devIdChild.Right(1);
+								}
+								else if (flagBlackList)
+								{
+									// ?
+									m_BlackIdeController.Add(devIdChild);
+								}
 							}
-							else if (flagBlackList)
+
+							WCHAR szChildName[256] = {};
+							ULONG cbChildName = sizeof(szChildName);
+							if (CM_Get_DevNode_Registry_PropertyW(childInst, CM_DRP_FRIENDLYNAME, NULL, szChildName, &cbChildName, 0) != CR_SUCCESS)
 							{
-								m_BlackIdeController.Add(deviceId);
+								cbChildName = sizeof(szChildName);
+								CM_Get_DevNode_Registry_PropertyW(childInst, CM_DRP_DEVICEDESC, NULL, szChildName, &cbChildName, 0);
 							}
-							VariantClear(&pVal);
-						}
-						if (pCOMDev->Get(L"Name", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-						{
-							name2 = pVal.bstrVal;
-							if (!channel.IsEmpty())
+
+							CString name2(szChildName);
+							if (!channelChild.IsEmpty())
 							{
-								name2 += _T(" (") + channel + _T(")");
+								name2 += _T(" (") + channelChild + _T(")");
 							}
-							VariantClear(&pVal);
-						}
-						SAFE_RELEASE(pCOMDev);
 
-						// NVIDIA ATA Controller
-						if (name1.Find(_T("NVIDIA")) == 0)
-						{
-							FlagNvidiaController = TRUE;
-						}
-						// Marvell ATA Controller
-						if (name1.Find(_T("Marvell")) == 0)
-						{
-							FlagMarvellController = TRUE;
+							// NVIDIA / Marvell ATA Controller
+							if (name1.Find(_T("NVIDIA")) == 0)
+							{
+								FlagNvidiaController = TRUE;
+							}
+							if (name1.Find(_T("Marvell")) == 0)
+							{
+								FlagMarvellController = TRUE;
+							}
+
+							if (cstr.Find(_T("   - ") + name1) >= 0 || cstr.Find(_T("   + ") + name1) >= 0)
+							{
+								cstr1 = _T("- ") + name1;
+								cstr2 = _T("+ ") + name1;
+								cstr.Replace(cstr1, cstr2);
+
+								cstr1 = name1 + _T("\r\n     - ") + name2;
+								cstr.Replace(name1, cstr1);
+							}
+							else
+							{
+								cstr += _T("   - ") + name2 + _T("\r\n");
+							}
+							cstr.Replace(_T("%%%"), _T(" + "));
+
+							DEVINST siblingInst;
+							cr = CM_Get_Sibling(&siblingInst, childInst, 0);
+							childInst = siblingInst;
 						}
 
-						if (cstr.Find(_T("   - ") + name1) >= 0 || cstr.Find(_T("   + ") + name1) >= 0)
-						{
-							cstr1 = _T("- ") + name1;
-							cstr2 = _T("+ ") + name1;
-							cstr.Replace(cstr1, cstr2);
-
-							cstr1 = name1 + _T("\r\n     - ") + name2;
-							cstr.Replace(name1, cstr1);
-						}
-						else
-						{
-							cstr += _T("   - ") + name2 + _T("\r\n");
-						}
-						cstr.Replace(_T("%%%"), _T(" + "));
+						cstr.Replace(_T("%%%"), _T(" - "));
 					}
-					cstr.Replace(_T("%%%"), _T(" - "));
-					SAFE_RELEASE(pEnumCOMDevs2);
 				}
+
 				csa.Add(cstr);
-				SAFE_RELEASE(pEnumCOMDevs);
 				DebugPrint(_T("OK:Win32_IDEController"));
 			}
 			catch (...)
@@ -1065,98 +1055,94 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 			try
 			{
 				cstr = _T("");
-				hRes = pIWbemServices->ExecQuery(_bstr_t(L"WQL"),
-					_bstr_t(L"select Name, DeviceID from Win32_SCSIController"), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumCOMDevs);
-				if (FAILED(hRes))
-				{
-					goto safeRelease;
-				}
-
+				LPCWSTR pszId = pszIdBase;
 				int workaroundController = 0;
-				while (pEnumCOMDevs && SUCCEEDED(pEnumCOMDevs->Next(10000, 1, &pCOMDev, &uReturned)) && uReturned == 1 && workaroundController < 256)
+
+				while (*pszId != L'\0' && workaroundController < 256)
 				{
+					DEVINST devInst;
+					cr = CM_Locate_DevNodeW(&devInst, (DEVINSTID_W)pszId, CM_LOCATE_DEVNODE_NORMAL);
+					pszId += wcslen(pszId) + 1;
 					workaroundController++;
+					if (cr != CR_SUCCESS)
+						continue;
+					// CLASS = "SCSIAdapter"
+					WCHAR szClass[64] = {};
+					ULONG cbClass = sizeof(szClass);
+					if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_CLASS, NULL, szClass, &cbClass, 0) != CR_SUCCESS)
+						continue;
+					if (_wcsicmp(szClass, L"SCSIAdapter") != 0)
+						continue;
 					BOOL flagUASP = FALSE;
 					BOOL flagBlackList = FALSE;
 					BOOL flagSiliconImage = FALSE;
 					DWORD siliconImageType = 0;
 
-					VARIANT  pVal;
-					VariantInit(&pVal);
-					CString name1, deviceId;
-					if (pCOMDev->Get(L"DeviceID", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
+					WCHAR szDevId[256] = {};
+					ULONG cchDevId = _countof(szDevId);
+					cr = CM_Get_Device_IDW(devInst, szDevId, cchDevId, 0);
+					if (cr != CR_SUCCESS)
+						continue;
+					CString deviceId(szDevId);
+					deviceId.Replace(_T("\\"), _T("\\\\"));
+
+					WCHAR szName[256] = {};
+					ULONG cbName = sizeof(szName);
+					if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_FRIENDLYNAME, NULL, szName, &cbName, 0) != CR_SUCCESS)
 					{
-						deviceId = pVal.bstrVal;
-						deviceId.Replace(_T("\\"), _T("\\\\"));
-						VariantClear(&pVal);
+						cbName = sizeof(szName);
+						CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_DEVICEDESC, NULL, szName, &cbName, 0);
 					}
-					if (pCOMDev->Get(L"Name", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
+
+					CString name1(szName);
+					m_ScsiController.Add(name1);
+
+					// UASP List
+					if (name1.Find(_T("USB")) >= 0 || name1.Find(_T("UAS")) >= 0)
+						flagUASP = TRUE;
+
+					if (!IsAdvancedDiskSearch && name1.Find(_T("VIA VT6410")) == 0)
 					{
-						name1 = pVal.bstrVal;
-						m_ScsiController.Add(name1);
-						VariantClear(&pVal);
-
-						// UASP List
-						if (name1.Find(_T("USB")) >= 0 || name1.Find(_T("UAS")) >= 0)
-						{
-							flagUASP = TRUE;
-						}
-
-						// Black List
-						if (!IsAdvancedDiskSearch
-							&& (name1.Find(_T("VIA VT6410")) == 0)
-							)
-						{
-							flagBlackList = TRUE;
-						}
-						else if (!IsAdvancedDiskSearch
-							&& (name1.Find(_T("ITE IT8212")) == 0)
-							)
-						{
-							flagBlackList = TRUE;
-						}
-
-						// NVIDIA SCSI Controller
-						if (name1.Find(_T("NVIDIA")) == 0)
-						{
-							FlagNvidiaController = TRUE;
-						}
-						// Marvell SCSI Controller
-						if (name1.Find(_T("Marvell")) == 0)
-						{
-							FlagMarvellController = TRUE;
-						}
-
-						// Workaround for DVDFab Virtual Drive
-						if (name1.Find(_T("DVDFab Virtual Drive")) == 0)
-						{
-							continue;
-						}
-
-						// Silicon Image Controller
-						if (name1.Find(_T("Silicon Image SiI ")) == 0)
-						{
-							flagSiliconImage = TRUE;
-							CString cstr;
-							cstr = name1;
-							cstr.Replace(_T("Silicon Image SiI "), _T(""));
-							siliconImageType = _tstoi(cstr);
-						}
-						// https://crystalmark.info/bbs/c-board.cgi?cmd=one;no=836;id=diskinfo#836
-						else if (name1.Find(_T("BUFFALO IFC-PCI2ES")) == 0)
-						{
-							flagSiliconImage = TRUE;
-							siliconImageType = 3112;
-						}
-						// https://crystalmark.info/bbs/c-board.cgi?cmd=one;no=1270;id=diskinfo#1270
-						// http://dream-drive.net/archives/2010/01/ifc-pcie2sawo.html
-						else if (name1.Find(_T("BUFFALO IFC-PCIE2SA")) == 0)
-						{
-							flagSiliconImage = TRUE;
-							siliconImageType = 3132;
-						}
+						flagBlackList = TRUE;
 					}
-					SAFE_RELEASE(pCOMDev);
+					else if (!IsAdvancedDiskSearch && name1.Find(_T("ITE IT8212")) == 0)
+					{
+						flagBlackList = TRUE;
+					}
+
+					// NVIDIA / Marvell SCSI Controller
+					if (name1.Find(_T("NVIDIA")) == 0)
+					{
+						FlagNvidiaController = TRUE;
+					}
+					if (name1.Find(_T("Marvell")) == 0)
+					{
+						FlagMarvellController = TRUE;
+					}
+
+					// DVDFab Virtual Drive：Skip
+					if (name1.Find(_T("DVDFab Virtual Drive")) == 0)
+						continue;
+
+					// Silicon Image Controller / BUFFALO
+					if (name1.Find(_T("Silicon Image SiI ")) == 0)
+					{
+						flagSiliconImage = TRUE;
+						CString tmp = name1;
+						tmp.Replace(_T("Silicon Image SiI "), _T(""));
+						siliconImageType = _tstoi(tmp);
+					}
+					else if (name1.Find(_T("BUFFALO IFC-PCI2ES")) == 0)
+					{
+						flagSiliconImage = TRUE;
+						siliconImageType = 3112;
+					}
+					else if (name1.Find(_T("BUFFALO IFC-PCIE2SA")) == 0)
+					{
+						flagSiliconImage = TRUE;
+						siliconImageType = 3132;
+					}
+
 					if (cstr.Find(name1) == -1 || cstr.Find(name1 + _T(" [SCSI]")) >= 0)
 					{
 						csa.Add(cstr);
@@ -1164,44 +1150,46 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 						cstr += _T("\r\n");
 					}
 
+					// Win32_SCSIControllerDevice ASSOCIATORS
+					DEVINST childInst;
+					cr = CM_Get_Child(&childInst, devInst, 0);
 					int workaroundDevice = 0;
-					CString mapping;
-					mapping.Format(_T("ASSOCIATORS OF {Win32_SCSIController.DeviceID=\"%s\"} WHERE AssocClass = Win32_SCSIControllerDevice"), deviceId.GetString());
-					pIWbemServices->ExecQuery(_bstr_t(L"WQL"), _bstr_t(mapping), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumCOMDevs2);
-					while (pEnumCOMDevs2 && SUCCEEDED(pEnumCOMDevs2->Next(10000, 1, &pCOMDev, &uReturned)) && uReturned == 1 && workaroundDevice < 256)
+
+					while (cr == CR_SUCCESS && workaroundDevice < 256)
 					{
 						workaroundDevice++;
-						VARIANT pVal;
-						VariantInit(&pVal);
-						CString name2, deviceId;
-						if (pCOMDev->Get(L"DeviceID", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
+
+						CString childDevId;
+						WCHAR szChildId[256] = {};
+						ULONG cchChildId = _countof(szChildId);
+						if (CM_Get_Device_IDW(childInst, szChildId, cchChildId, 0) == CR_SUCCESS)
 						{
-							deviceId = pVal.bstrVal;
-							VariantClear(&pVal);
+							childDevId = szChildId;
 
 							if (flagUASP)
 							{
-								m_UASPController.Add(deviceId);
+								m_UASPController.Add(childDevId);
 							}
-
 							if (flagBlackList)
 							{
-								m_BlackScsiController.Add(deviceId);
+								m_BlackScsiController.Add(childDevId);
 							}
-
 							if (flagSiliconImage)
 							{
-								m_SiliconImageController.Add(deviceId);
+								m_SiliconImageController.Add(childDevId);
 								m_SiliconImageControllerType.Add(siliconImageType);
 							}
 						}
 
-						if (pCOMDev->Get(L"Name", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
+						WCHAR szChildName[256] = {};
+						ULONG cbChildName = sizeof(szChildName);
+						if (CM_Get_DevNode_Registry_PropertyW(childInst, CM_DRP_FRIENDLYNAME, NULL, szChildName, &cbChildName, 0) != CR_SUCCESS)
 						{
-							name2 = pVal.bstrVal;
-							VariantClear(&pVal);
+							cbChildName = sizeof(szChildName);
+							CM_Get_DevNode_Registry_PropertyW(childInst, CM_DRP_DEVICEDESC, NULL, szChildName, &cbChildName, 0);
 						}
-						SAFE_RELEASE(pCOMDev);
+
+						CString name2(szChildName);
 
 						if (cstr.Find(_T("   - ") + name1) >= 0 || cstr.Find(_T("   + ") + name1) >= 0)
 						{
@@ -1217,12 +1205,16 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 							cstr += _T("   - ") + name2 + _T("\r\n");
 						}
 						cstr.Replace(_T("%%%"), _T(" + "));
+
+						DEVINST siblingInst;
+						cr = CM_Get_Sibling(&siblingInst, childInst, 0);
+						childInst = siblingInst;
 					}
+
 					cstr.Replace(_T("%%%"), _T(" - "));
-					SAFE_RELEASE(pEnumCOMDevs2);
 				}
+
 				csa.Add(cstr);
-				SAFE_RELEASE(pEnumCOMDevs);
 				DebugPrint(_T("OK:Win32_SCSIController"));
 			}
 			catch (...)
@@ -1239,72 +1231,59 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 
 			try
 			{// Win32_USBController
-				hRes = pIWbemServices->ExecQuery(_bstr_t(L"WQL"),
-					_bstr_t(L"select Name, DeviceID from Win32_USBController"), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumCOMDevs);
-				if (FAILED(hRes))
-				{
-					goto safeRelease;
-				}
+				LPCWSTR pszId = pszIdBase;
 
-				while (pEnumCOMDevs && SUCCEEDED(pEnumCOMDevs->Next(10000, 1, &pCOMDev, &uReturned)) && uReturned == 1)
+				while (*pszId != L'\0')
 				{
-					VARIANT  pVal;
-					VariantInit(&pVal);
-					CString deviceId, channel;
-					if (pCOMDev->Get(L"DeviceID", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-					{
-						deviceId = pVal.bstrVal;
-						deviceId.Replace(_T("\\"), _T("\\\\"));
-						VariantClear(&pVal);
-					}
-					SAFE_RELEASE(pCOMDev);
+					DEVINST devInst;
+					cr = CM_Locate_DevNodeW(&devInst, (DEVINSTID_W)pszId, CM_LOCATE_DEVNODE_NORMAL);
+					pszId += wcslen(pszId) + 1;
+					if (cr != CR_SUCCESS)
+						continue;
+					// PNP DeviceID
+					WCHAR szDevId[256] = {};
+					ULONG cchDevId = _countof(szDevId);
+					if (CM_Get_Device_IDW(devInst, szDevId, cchDevId, 0) != CR_SUCCESS)
+						continue;
+					CString deviceId(szDevId);
 
-					CString mapping, enclosure;
-					mapping.Format(_T("ASSOCIATORS OF {Win32_USBController.DeviceID=\"%s\"} WHERE AssocClass = Win32_USBControllerDevice"), deviceId.GetString());
-					pIWbemServices->ExecQuery(_bstr_t(L"WQL"), _bstr_t(mapping), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumCOMDevs2);
-					while (pEnumCOMDevs2 && SUCCEEDED(pEnumCOMDevs2->Next(10000, 1, &pCOMDev, &uReturned)) && uReturned == 1)
+					// USBSTOR\\...
+					if (deviceId.Find(_T("USBSTOR")) >= 0)
 					{
-						VARIANT pVal;
-						VariantInit(&pVal);
-						if (pCOMDev->Get(L"DeviceID", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
+						EXTERNAL_DISK_INFO edi;
+						edi.UsbVendorId = 0;
+						edi.UsbProductId = 0;
+
+						// VID_xxxx / PID_yyyy
+						int curPos = 0;
+						CString token = deviceId.Tokenize(_T("\\&"), curPos);
+						while (!token.IsEmpty())
 						{
-							cstr = pVal.bstrVal;
-							VariantClear(&pVal);
-							if (cstr.Find(_T("USBSTOR")) >= 0)
+							CString tmp = token;
+							if (tmp.Replace(_T("VID_"), _T("")) > 0)
 							{
-								EXTERNAL_DISK_INFO edi;
-								edi.UsbProductId = 0;
-								edi.UsbVendorId = 0;
-								int curPos = 0;
-								CString resToken;
-								resToken = deviceId.Tokenize(_T("\\&"), curPos);
-								while (resToken != _T(""))
-								{
-									if (resToken.Replace(_T("VID_"), _T("")) > 0)
-									{
-										edi.UsbVendorId = _tcstol(resToken, NULL, 16);
-									}
-									else if (resToken.Replace(_T("PID_"), _T("")) > 0)
-									{
-										edi.UsbProductId = _tcstol(resToken, NULL, 16);
-									}
-									resToken = deviceId.Tokenize(_T("\\&"), curPos);
-								};
-
-								if (pCOMDev->Get(L"Name", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-								{
-									edi.Enclosure = pVal.bstrVal;
-									VariantClear(&pVal);
-								}
-								externals.Add(edi);
+								edi.UsbVendorId = _tcstol(tmp, NULL, 16);
 							}
-							deviceId = cstr;
+							else if (tmp.Replace(_T("PID_"), _T("")) > 0)
+							{
+								edi.UsbProductId = _tcstol(tmp, NULL, 16);
+							}
+							token = deviceId.Tokenize(_T("\\&"), curPos);
 						}
-						SAFE_RELEASE(pCOMDev);
+
+						WCHAR szName[256] = {};
+						ULONG cbName = sizeof(szName);
+						if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_FRIENDLYNAME, NULL, szName, &cbName, 0) != CR_SUCCESS)
+						{
+							cbName = sizeof(szName);
+							CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_DEVICEDESC, NULL, szName, &cbName, 0);
+						}
+						edi.Enclosure = szName;
+
+						externals.Add(edi);
 					}
-					SAFE_RELEASE(pEnumCOMDevs2);
 				}
-				SAFE_RELEASE(pEnumCOMDevs);
+
 				DebugPrint(_T("OK:Win32_USBController"));
 
 				for (int i = 0; i < externals.GetCount(); i++)
@@ -1530,29 +1509,12 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 #endif
 			try
 			{
-				DebugPrint(_T("DO:SELECT * FROM Win32_DiskDrive"));
-				hRes = pIWbemServices->ExecQuery(_bstr_t(L"WQL"), 
-					_bstr_t(L"SELECT * FROM Win32_DiskDrive"), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumCOMDevs);
-				if(FAILED(hRes))
-				{
-					goto safeRelease;
-				}
-				DebugPrint(_T("OK1:SELECT * FROM Win32_DiskDrive"));
+				LPCWSTR pszId = pszIdBase;
 
-				if(! pEnumCOMDevs)
+				while (*pszId != L'\0')
 				{
-					DebugPrint(_T("pEnumCOMDevs == NULL"));
-					goto safeRelease;
-				}
+					DebugPrint(_T("while(DeviceList for DiskDrive)"));
 
-				while(SUCCEEDED(pEnumCOMDevs->Next(10000, 1, &pCOMDev, &uReturned)))
-				{
-					if(uReturned != 1)
-					{
-						DebugPrint(_T("uReturned != 1"));
-						break;
-					}
-					DebugPrint(_T("while(pEnumCOMDevs ..."));
 					CString mapping1, mapping2;
 					CString model, deviceId, diskSize, mediaType, interfaceTypeWmi, pnpDeviceId, firmware;
 					INT physicalDriveId = -1, scsiPort = -1, scsiTargetId = -1, scsiBus = -1;
@@ -1561,106 +1523,153 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 					BOOL flagUasp = FALSE;
 					BOOL flagNVMe = FALSE;
 					DWORD siliconImageType = 0;
-					
-				try
-				{
-					VARIANT pVal;
-					VariantInit(&pVal);
-					if(pCOMDev->Get(L"Size", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-					{
-						diskSize = pVal.bstrVal;
-						DebugPrint(_T("diskSize:") + diskSize);
-						VariantClear(&pVal);
-					}
 
-					if(pCOMDev->Get(L"DeviceID", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
+					try
 					{
-						deviceId = pVal.bstrVal;
+						DEVINST devInst;
+						cr = CM_Locate_DevNodeW(&devInst, (DEVINSTID_W)pszId, CM_LOCATE_DEVNODE_NORMAL);
+						if (cr != CR_SUCCESS)
+							throw (DWORD)cr;
+
+						// Win32_DiskDrive
+						WCHAR szClass[64] = {};
+						ULONG cbClass = sizeof(szClass);
+						if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_CLASS, NULL, szClass, &cbClass,0) != CR_SUCCESS
+							|| _wcsicmp(szClass, L"DiskDrive") != 0)
+							goto NextDisk;
+
+						// \Device\HarddiskN\DRx
+						WCHAR szBuf[MAX_PATH] = {};
+						ULONG cbPdo = sizeof(szBuf);
+						if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_PHYSICAL_DEVICE_OBJECT_NAME, NULL, szBuf, &cbPdo, 0) == CR_SUCCESS)
+						{
+							CString pdo(szBuf);
+							int pos = pdo.Find(L"Harddisk");
+							if (pos >= 0)
+							{
+								pos += (int)wcslen(L"Harddisk");
+								CString num;
+								while (pos < pdo.GetLength() && iswdigit(pdo[pos]))
+								{
+									num += pdo[pos];
+									pos++;
+								}
+								if (!num.IsEmpty())
+								{
+									physicalDriveId = _wtoi(num);
+								}
+							}
+						}
+
+						if (physicalDriveId < 0)
+						{
+							DebugPrint(_T("Invalid physicalDriveId"));
+							goto NextDisk;
+						}
+
+						deviceId.Format(_T("\\\\.\\PHYSICALDRIVE%d"), physicalDriveId);
 						DebugPrint(_T("deviceId:") + deviceId);
-						deviceId.Replace(_T("\\"), _T("\\\\"));
-						if(_ttoi(deviceId.Right(2)) >= 10)
+
+						ULONG cbName = sizeof(szBuf);
+						if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_FRIENDLYNAME, NULL, szBuf, &cbName, 0) != CR_SUCCESS)
 						{
-							physicalDriveId = _ttoi(deviceId.Right(2));
+							cbName = sizeof(szBuf);
+							CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_DEVICEDESC, NULL, szBuf, &cbName, 0);
 						}
-						else
-						{
-							physicalDriveId = _ttoi(deviceId.Right(1));
-						}
-						VariantClear(&pVal);
-					}
-					if(pCOMDev->Get(L"Model", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-					{
-						model = pVal.bstrVal;
+						model = szBuf;
 						DebugPrint(_T("model:") + model);
-						VariantClear(&pVal);
-					}
-					if(pCOMDev->Get(L"FirmwareRevision", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-					{
-						firmware = pVal.bstrVal;
-						VariantClear(&pVal);
-					}
-					if(pCOMDev->Get(L"SCSIPort", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-					{
-						scsiPort = pVal.intVal;
-						VariantClear(&pVal);
-					}			
-					if(pCOMDev->Get(L"SCSITargetId", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-					{
-						scsiTargetId = pVal.intVal;
-						VariantClear(&pVal);
-					}
-					if(pCOMDev->Get(L"SCSIBus", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-					{
-						scsiBus = pVal.intVal;
-						VariantClear(&pVal);
-					}
-					if(pCOMDev->Get(L"MediaType", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-					{
-						mediaType = pVal.bstrVal;
-						DebugPrint(_T("mediaType:") + mediaType);
-						mediaType.MakeLower();
-						VariantClear(&pVal);
 
-						// https://crystalmark.info/bbs/c-board.cgi?cmd=one;no=994;id=diskinfo#994
-						if(model.Find(_T("SanDisk Extreme")) == 0)
+						ULONG cchDevId = sizeof(szBuf);
+						if (CM_Get_Device_IDW(devInst, szBuf, cchDevId, 0) == CR_SUCCESS)
 						{
-							flagTarget = TRUE;
-							detectUSBMemory = TRUE;
+							pnpDeviceId = szBuf;
+							DebugPrint(_T("pnpDeviceId:") + pnpDeviceId);
+							pnpDeviceId.MakeUpper();
 						}
-						// https://crystalmark.info/bbs/c-board.cgi?cmd=one;no=1198;id=diskinfo#1198
-						else if(model.Find(_T("Kingston DT Ultimate")) == 0)
+
+						// Get Size / SCSIPort / SCSITargetId / SCSIBus / MediaType
+						CString physPath;
+						physPath.Format(_T("\\\\.\\PhysicalDrive%d"), physicalDriveId);
+						HANDLE hDisk = CreateFileW(physPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+
+						if (hDisk != INVALID_HANDLE_VALUE && hDisk != NULL)
 						{
-							flagTarget = TRUE;
-							detectUSBMemory = TRUE;
-						}
-						else if(FlagUsbMemory)
-						{
-							flagTarget = TRUE;
-							detectUSBMemory = TRUE;
-						}
-						else if(mediaType.Find(_T("removable")) >= 0 || mediaType.IsEmpty())
-						{
-							flagTarget = FALSE;
+							// Size
+							GET_LENGTH_INFORMATION lenInfo = {};
+							DWORD dwRet = 0;
+							if (DeviceIoControl(hDisk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &lenInfo, sizeof(lenInfo), &dwRet, NULL))
+							{
+								diskSize.Format(_T("%I64u"), (ULONGLONG)lenInfo.Length.QuadPart);
+								DebugPrint(_T("diskSize:") + diskSize);
+							}
+
+							// MediaType
+							DISK_GEOMETRY dg = {};
+							if (DeviceIoControl(hDisk, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, &dg, sizeof(dg), &dwRet, NULL))
+							{
+								if (dg.MediaType == FixedMedia)
+									mediaType = _T("fixed");
+								else
+									mediaType = _T("removable");
+								DebugPrint(_T("mediaType:") + mediaType);
+								mediaType.MakeLower();
+							}
+
+							// SCSIPort / SCSITargetId / SCSIBus
+							SCSI_ADDRESS sa = {};
+							if (DeviceIoControl(hDisk, IOCTL_SCSI_GET_ADDRESS, NULL, 0, &sa, sizeof(sa), &dwRet, NULL))
+							{
+								scsiPort = sa.PortNumber;
+								scsiTargetId = sa.TargetId;
+								scsiBus = sa.PathId;
+							}
+
+							safeCloseHandle(hDisk);
 						}
 						else
 						{
-							flagTarget = TRUE;
+							DebugPrint(_T("CreateFile(PhysicalDrive) failed"));
 						}
-					}
-					if(pCOMDev->Get(L"InterfaceType", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-					{
-						interfaceTypeWmi = pVal.bstrVal;
-						DebugPrint(_T("interfaceTypeWmi:") + interfaceTypeWmi);
-						VariantClear(&pVal);
-					}
 
-					// Added 3.3.1 (Controller Black List Support)
-					if(pCOMDev->Get(L"PNPDeviceID", 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
-					{
-						pnpDeviceId = pVal.bstrVal;
-						DebugPrint(_T("pnpDeviceId:") + pnpDeviceId);
-						pnpDeviceId.MakeUpper();
-						VariantClear(&pVal);
+						// InterfaceType
+						if (pnpDeviceId.Find(_T("USB")) >= 0 || model.Find(_T(" USB Device")) > 0)
+						{
+							interfaceTypeWmi = _T("USB");
+						}
+						else if (pnpDeviceId.Find(_T("1394")) >= 0 || model.Find(_T(" IEEE 1394 SBP2 Device")) > 0)
+						{
+							interfaceTypeWmi = _T("1394");
+						}
+						DebugPrint(_T("interfaceTypeWmi:") + interfaceTypeWmi);
+
+						if (!mediaType.IsEmpty())
+						{
+							// https://crystalmark.info/bbs/c-board.cgi?cmd=one;no=994;id=diskinfo#994
+							if(model.Find(_T("SanDisk Extreme")) == 0)
+							{
+								flagTarget = TRUE;
+								detectUSBMemory = TRUE;
+							}
+							// https://crystalmark.info/bbs/c-board.cgi?cmd=one;no=1198;id=diskinfo#1198
+							else if(model.Find(_T("Kingston DT Ultimate")) == 0)
+							{
+								flagTarget = TRUE;
+								detectUSBMemory = TRUE;
+							}
+							else if(FlagUsbMemory)
+							{
+								flagTarget = TRUE;
+								detectUSBMemory = TRUE;
+							}
+							else if(mediaType.Find(_T("removable")) >= 0 || mediaType.IsEmpty())
+							{
+								flagTarget = FALSE;
+							}
+							else
+							{
+								flagTarget = TRUE;
+							}
+						}
 
 						// Is UAS Controller (5.2.0-)
 						for(int i = 0; i < m_UASPController.GetCount(); i++)
@@ -1699,236 +1708,236 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 								flagBlackList = TRUE;
 							}
 						}
-					}
 
-					SAFE_RELEASE(pCOMDev);
-
-					if(! flagBlackList)
-					{
-						// GetDiskInfo
-						CString cstr;
-						cstr.Format(_T("DO:GetDiskInfo pd=%d, sp=%d, st=%d, mt=%s"), physicalDriveId, scsiPort, scsiTargetId, mediaType.GetString());
-						DebugPrint(cstr);
-
-						INTERFACE_TYPE interfaceType = INTERFACE_TYPE::INTERFACE_TYPE_UNKNOWN;
-						COMMAND_TYPE commandType = COMMAND_TYPE::CMD_TYPE_UNKNOWN;
-						VENDOR_ID usbVendorId = VENDOR_ID::VENDOR_UNKNOWN;
-						DWORD usbProductId = 0;
-
-						if(interfaceTypeWmi.Find(_T("1394")) >= 0 || model.Find(_T(" IEEE 1394 SBP2 Device")) > 0)
+						if(! flagBlackList)
 						{
-							DebugPrint(_T("INTERFACE_TYPE_IEEE1394"));
-							interfaceType = INTERFACE_TYPE_IEEE1394;
-						}
-						else if(interfaceTypeWmi.Find(_T("USB")) >= 0 || model.Find(_T(" USB Device")) > 0 || flagUasp)
-						{
-							DebugPrint(_T("INTERFACE_TYPE_USB"));
-							interfaceType = INTERFACE_TYPE_USB;
+							// GetDiskInfo
+							CString cstr;
+							cstr.Format(_T("DO:GetDiskInfo pd=%d, sp=%d, st=%d, mt=%s"), physicalDriveId, scsiPort, scsiTargetId, mediaType.GetString());
+							DebugPrint(cstr);
 
-							if (model.Find(_T("NVMe")) >= 0 || pnpDeviceId.Find(_T("NVME")) >= 0)
+							INTERFACE_TYPE interfaceType = INTERFACE_TYPE::INTERFACE_TYPE_UNKNOWN;
+							COMMAND_TYPE commandType = COMMAND_TYPE::CMD_TYPE_UNKNOWN;
+							VENDOR_ID usbVendorId = VENDOR_ID::VENDOR_UNKNOWN;
+							DWORD usbProductId = 0;
+
+							if(interfaceTypeWmi.Find(_T("1394")) >= 0 || model.Find(_T(" IEEE 1394 SBP2 Device")) > 0)
 							{
+								DebugPrint(_T("INTERFACE_TYPE_IEEE1394"));
+								interfaceType = INTERFACE_TYPE_IEEE1394;
+							}
+							else if(interfaceTypeWmi.Find(_T("USB")) >= 0 || model.Find(_T(" USB Device")) > 0 || flagUasp)
+							{
+								DebugPrint(_T("INTERFACE_TYPE_USB"));
+								interfaceType = INTERFACE_TYPE_USB;
+
+								if (model.Find(_T("NVMe")) >= 0 || pnpDeviceId.Find(_T("NVME")) >= 0)
+								{
+									flagNVMe = TRUE;
+								}
+							}
+							else if (model.Find(_T("NVMe")) >= 0 || pnpDeviceId.Find(_T("NVME")) >= 0 || model.Find(_T("Optane")) >= 0 || pnpDeviceId.Find(_T("OPTANE")) >= 0)
+							{
+								DebugPrint(_T("INTERFACE_TYPE_NVME"));
+								interfaceType = INTERFACE_TYPE_NVME;
 								flagNVMe = TRUE;
 							}
-						}
-						else if (model.Find(_T("NVMe")) >= 0 || pnpDeviceId.Find(_T("NVME")) >= 0 || model.Find(_T("Optane")) >= 0 || pnpDeviceId.Find(_T("OPTANE")) >= 0)
-						{
-							DebugPrint(_T("INTERFACE_TYPE_NVME"));
-							interfaceType = INTERFACE_TYPE_NVME;
-							flagNVMe = TRUE;
-						}
-						else
-						{
-							flagTarget = TRUE;
-						}
-
-						cstr.Format(L"InterfaceTypeId=%d", interfaceType);
-						DebugPrint(cstr);
-						
-						for(int i = 0; i < externals.GetCount(); i++)
-						{
-							if(model.Find(externals.GetAt(i).Enclosure) == 0)
+							else
 							{
-								usbVendorId = (VENDOR_ID)externals[i].UsbVendorId;
-								usbProductId = externals[i].UsbProductId;
-								cstr.Format(_T("usbVendorId=%04X, usbProductId=%04X"), usbVendorId, usbProductId);
-								DebugPrint(cstr);
+								flagTarget = TRUE;
 							}
-						}
 
-						if(IsAdvancedDiskSearch && mediaType.IsEmpty())
-						{
-							flagTarget = TRUE;
-						}
+							cstr.Format(L"InterfaceTypeId=%d", interfaceType);
+							DebugPrint(cstr);
 
-						// [2010/12/05] Workaround for SAMSUNG HD204UI
-						// http://sourceforge.net/apps/trac/smartmontools/wiki/SamsungF4EGBadBlocks
-						if((model.Find(_T("SAMSUNG HD155UI")) == 0 || model.Find(_T("SAMSUNG HD204UI")) == 0) && firmware.Find(_T("1AQ10003")) != 0 && IsWorkaroundHD204UI)
-						{
-							flagTarget = FALSE;
-						}
-
-						// [2018/10/24] Workaround for FuzeDrive (AMDStoreMi)
-						if (model.Find(_T("FuzeDrive")) != -1 || model.Find(_T("StoreMI")) != -1)
-						{
-							flagTarget = FALSE;
-						}
-
-						int previousCount = (int)vars.GetCount();
-						DebugPrint(_T("flagTarget && GetDiskInfo"));
-						if (flagTarget && GetDiskInfo(physicalDriveId, scsiPort, scsiTargetId, interfaceType, commandType, usbVendorId, usbProductId, scsiBus, siliconImageType, FlagNvidiaController, FlagMarvellController, pnpDeviceId, flagNVMe, flagUasp))
-						{
-							CString debug;
-							debug.Format(L"index=%d", (int)vars.GetCount() - 1);
-							DebugPrint(debug);
-							// for ASM1352 support
-							for(int index = (int)vars.GetCount() - 1; index + 1 > previousCount; index--)
+							for(int i = 0; i < externals.GetCount(); i++)
 							{
-								debug.Format(L"index=%d, previousCount=%d", (int)vars.GetCount() - 1, previousCount);
+								if(model.Find(externals.GetAt(i).Enclosure) == 0)
+								{
+									usbVendorId = (VENDOR_ID)externals[i].UsbVendorId;
+									usbProductId = externals[i].UsbProductId;
+									cstr.Format(_T("usbVendorId=%04X, usbProductId=%04X"), usbVendorId, usbProductId);
+									DebugPrint(cstr);
+								}
+							}
+
+							if(IsAdvancedDiskSearch && mediaType.IsEmpty())
+							{
+								flagTarget = TRUE;
+							}
+
+							// [2010/12/05] Workaround for SAMSUNG HD204UI
+							// http://sourceforge.net/apps/trac/smartmontools/wiki/SamsungF4EGBadBlocks
+							if((model.Find(_T("SAMSUNG HD155UI")) == 0 || model.Find(_T("SAMSUNG HD204UI")) == 0) && firmware.Find(_T("1AQ10003")) != 0 && IsWorkaroundHD204UI)
+							{
+								flagTarget = FALSE;
+							}
+
+							// [2018/10/24] Workaround for FuzeDrive (AMDStoreMi)
+							if (model.Find(_T("FuzeDrive")) != -1 || model.Find(_T("StoreMI")) != -1)
+							{
+								flagTarget = FALSE;
+							}
+
+							int previousCount = (int)vars.GetCount();
+							DebugPrint(_T("flagTarget && GetDiskInfo"));
+							if (flagTarget && GetDiskInfo(physicalDriveId, scsiPort, scsiTargetId, interfaceType, commandType, usbVendorId, usbProductId, scsiBus, siliconImageType, FlagNvidiaController, FlagMarvellController, pnpDeviceId, flagNVMe, flagUasp))
+							{
+								CString debug;
+								debug.Format(L"index=%d", (int)vars.GetCount() - 1);
 								DebugPrint(debug);
-							//	int index = (int)vars.GetCount() - 1;
-								if (!diskSize.IsEmpty())
+								// for ASM1352 support
+								for(int index = (int)vars.GetCount() - 1; index + 1 > previousCount; index--)
 								{
-									vars[index].DiskSizeWmi = (DWORD)(_ttoi64(diskSize) / 1000 / 1000 - 49);
-									if (0 < vars[index].TotalDiskSize && vars[index].TotalDiskSize < 1000) // < 1GB
+									debug.Format(L"index=%d, previousCount=%d", (int)vars.GetCount() - 1, previousCount);
+									DebugPrint(debug);
+									//	int index = (int)vars.GetCount() - 1;
+									if (!diskSize.IsEmpty())
 									{
-										//	vars[index].TotalDiskSize == vars[index].DiskSizeChs;
-									}
-									else if (vars[index].TotalDiskSize < 10 * 1000) // < 10GB
-									{
-										vars[index].TotalDiskSize = vars[index].DiskSizeWmi;
-									}
-									else if (vars[index].TotalDiskSize < vars[index].DiskSizeWmi)
-									{
-										//	vars[index].TotalDiskSize = vars[index].DiskSizeWmi;
-									}
-								}
-
-								BOOL flagSkipModelCheck = FALSE;
-
-								vars[index].ModelWmi = model;
-								// Model
-								model.Replace(_T(" SCSI Disk Device"), _T(""));
-								model.Replace(_T(" SATA Disk Device"), _T(""));
-								model.Replace(_T(" ATA Disk Device"), _T(""));
-								model.Replace(_T(" SCSI Device"), _T(""));
-								model.Replace(_T(" SATA Device"), _T(""));
-								model.Replace(_T(" ATA Device"), _T(""));
-								model.Replace(_T("NVMe "), _T(""));
-
-								if (flagUasp)
-								{
-									flagSkipModelCheck = TRUE;
-									cstr.Format(_T("UASP (%s)"), vars[index].Interface.GetString());
-									vars[index].Interface = cstr;
-									vars[index].InterfaceType = INTERFACE_TYPE_USB;
-									vars[index].IsUasp = TRUE;
-
-									detectUASPdisks = TRUE;
-									for (int i = 0; i < externals.GetCount(); i++)
-									{
-										if (externals.GetAt(i).Enclosure.Find(vars[index].ModelWmi) == 0)
+										vars[index].DiskSizeWmi = (DWORD)(_ttoi64(diskSize) / 1000 / 1000 - 49);
+										if (0 < vars[index].TotalDiskSize && vars[index].TotalDiskSize < 1000) // < 1GB
 										{
-											vars[index].Enclosure = externals.GetAt(i).Enclosure;
-											vars[index].UsbVendorId = externals.GetAt(i).UsbVendorId;
-											vars[index].UsbProductId = externals.GetAt(i).UsbProductId;
+											//	vars[index].TotalDiskSize == vars[index].DiskSizeChs;
+										}
+										else if (vars[index].TotalDiskSize < 10 * 1000) // < 10GB
+										{
+											vars[index].TotalDiskSize = vars[index].DiskSizeWmi;
+										}
+										else if (vars[index].TotalDiskSize < vars[index].DiskSizeWmi)
+										{
+											//	vars[index].TotalDiskSize = vars[index].DiskSizeWmi;
 										}
 									}
-								}
-								else if (model.Replace(_T(" USB Device"), _T("")) > 0 || interfaceTypeWmi.Find(_T("USB")) >= 0)
-								{
-									flagSkipModelCheck = TRUE;
-									cstr.Format(_T("USB (%s)"), vars[index].Interface.GetString());
-									vars[index].Interface = cstr;
-									vars[index].InterfaceType = INTERFACE_TYPE_USB;
 
-									for (int i = 0; i < externals.GetCount(); i++)
+									BOOL flagSkipModelCheck = FALSE;
+
+									vars[index].ModelWmi = model;
+									// Model
+									model.Replace(_T(" SCSI Disk Device"), _T(""));
+									model.Replace(_T(" SATA Disk Device"), _T(""));
+									model.Replace(_T(" ATA Disk Device"), _T(""));
+									model.Replace(_T(" SCSI Device"), _T(""));
+									model.Replace(_T(" SATA Device"), _T(""));
+									model.Replace(_T(" ATA Device"), _T(""));
+									model.Replace(_T("NVMe "), _T(""));
+
+									if (flagUasp)
 									{
-										if (externals.GetAt(i).Enclosure.Find(vars[index].ModelWmi) == 0)
+										flagSkipModelCheck = TRUE;
+										cstr.Format(_T("UASP (%s)"), vars[index].Interface.GetString());
+										vars[index].Interface = cstr;
+										vars[index].InterfaceType = INTERFACE_TYPE_USB;
+										vars[index].IsUasp = TRUE;
+
+										detectUASPdisks = TRUE;
+										for (int i = 0; i < externals.GetCount(); i++)
 										{
-											vars[index].Enclosure = externals.GetAt(i).Enclosure;
-											vars[index].UsbVendorId = externals.GetAt(i).UsbVendorId;
-											vars[index].UsbProductId = externals.GetAt(i).UsbProductId;
+											if (externals.GetAt(i).Enclosure.Find(vars[index].ModelWmi) == 0)
+											{
+												vars[index].Enclosure = externals.GetAt(i).Enclosure;
+												vars[index].UsbVendorId = externals.GetAt(i).UsbVendorId;
+												vars[index].UsbProductId = externals.GetAt(i).UsbProductId;
+											}
 										}
 									}
-								}
-								else if (model.Replace(_T(" IEEE 1394 SBP2 Device"), _T("")) > 0 || interfaceTypeWmi.Find(_T("1394")) >= 0)
-								{
-									flagSkipModelCheck = TRUE;
-									cstr.Format(_T("IEEE 1394 (%s)"), vars[index].Interface.GetString());
-									vars[index].Interface = cstr;
-									vars[index].InterfaceType = INTERFACE_TYPE_IEEE1394;
-									for (int i = 0; i < externals.GetCount(); i++)
+									else if (model.Replace(_T(" USB Device"), _T("")) > 0 || interfaceTypeWmi.Find(_T("USB")) >= 0)
 									{
-										if (externals.GetAt(i).Enclosure.Find(vars[index].ModelWmi) == 0)
+										flagSkipModelCheck = TRUE;
+										cstr.Format(_T("USB (%s)"), vars[index].Interface.GetString());
+										vars[index].Interface = cstr;
+										vars[index].InterfaceType = INTERFACE_TYPE_USB;
+
+										for (int i = 0; i < externals.GetCount(); i++)
 										{
-											vars[index].Enclosure = externals.GetAt(i).Enclosure;
-											vars[index].UsbVendorId = externals.GetAt(i).UsbVendorId;
-											vars[index].UsbProductId = externals.GetAt(i).UsbProductId;
+											if (externals.GetAt(i).Enclosure.Find(vars[index].ModelWmi) == 0)
+											{
+												vars[index].Enclosure = externals.GetAt(i).Enclosure;
+												vars[index].UsbVendorId = externals.GetAt(i).UsbVendorId;
+												vars[index].UsbProductId = externals.GetAt(i).UsbProductId;
+											}
 										}
 									}
-								}
+									else if (model.Replace(_T(" IEEE 1394 SBP2 Device"), _T("")) > 0 || interfaceTypeWmi.Find(_T("1394")) >= 0)
+									{
+										flagSkipModelCheck = TRUE;
+										cstr.Format(_T("IEEE 1394 (%s)"), vars[index].Interface.GetString());
+										vars[index].Interface = cstr;
+										vars[index].InterfaceType = INTERFACE_TYPE_IEEE1394;
+										for (int i = 0; i < externals.GetCount(); i++)
+										{
+											if (externals.GetAt(i).Enclosure.Find(vars[index].ModelWmi) == 0)
+											{
+												vars[index].Enclosure = externals.GetAt(i).Enclosure;
+												vars[index].UsbVendorId = externals.GetAt(i).UsbVendorId;
+												vars[index].UsbProductId = externals.GetAt(i).UsbProductId;
+											}
+										}
+									}
 
-								CString cmp, cmp1, cmp2, cmp3;
-								cmp = model;
-								cmp.Replace(_T(" "), _T(""));
-								cmp1 = cmp.Left(8);
+									CString cmp, cmp1, cmp2, cmp3;
+									cmp = model;
+									cmp.Replace(_T(" "), _T(""));
+									cmp1 = cmp.Left(8);
 
-								cmp = vars[index].Model;
-								cmp.Replace(_T(" "), _T(""));
-								cmp2 = cmp.Left(8);
+									cmp = vars[index].Model;
+									cmp.Replace(_T(" "), _T(""));
+									cmp2 = cmp.Left(8);
 
-								cmp = vars[index].ModelReverse;
-								cmp.Replace(_T(" "), _T(""));
-								cmp3 = cmp.Left(8);
+									cmp = vars[index].ModelReverse;
+									cmp.Replace(_T(" "), _T(""));
+									cmp3 = cmp.Left(8);
 
-								if (vars[index].Model.IsEmpty())
-								{
-									DebugPrint(_T("WmiModel: ") + model);
-									DebugPrint(_T("SerialNumber: ") + vars[index].SerialNumber);
-									DebugPrint(_T("vars.RemoveAt(index) - 1"));
-									vars.RemoveAt(index);
-								}
-								else if (flagSkipModelCheck)
-								{
-									// None
-								}
-								else if (model.IsEmpty() || cmp1.Compare(cmp2) == 0)
-								{
-									// None
-								}
-								else if (cmp1.Compare(cmp3) == 0)
-								{
-									vars[index].SerialNumber = vars[index].SerialNumberReverse;
-									vars[index].FirmwareRev = vars[index].FirmwareRevReverse;
-									vars[index].Model = vars[index].ModelReverse;
-									vars[index].ModelSerial = GetModelSerial(vars[index].Model, vars[index].SerialNumber);
-								}
-								else if (vars[index].InterfaceType == INTERFACE_TYPE_USB)
-								{
-									// None
-								}
-								else
-								{
-									DebugPrint(_T("WmiModel: ") + model);
-									DebugPrint(_T("Model: ") + vars[index].Model);
-									DebugPrint(_T("SerialNumber: ") + vars[index].SerialNumber);
-									DebugPrint(_T("DISABLED: vars.RemoveAt(index) - 2"));
-									//	vars.RemoveAt(index);
-								}
+									if (vars[index].Model.IsEmpty())
+									{
+										DebugPrint(_T("WmiModel: ") + model);
+										DebugPrint(_T("SerialNumber: ") + vars[index].SerialNumber);
+										DebugPrint(_T("vars.RemoveAt(index) - 1"));
+										vars.RemoveAt(index);
+									}
+									else if (flagSkipModelCheck)
+									{
+										// None
+									}
+									else if (model.IsEmpty() || cmp1.Compare(cmp2) == 0)
+									{
+										// None
+									}
+									else if (cmp1.Compare(cmp3) == 0)
+									{
+										vars[index].SerialNumber = vars[index].SerialNumberReverse;
+										vars[index].FirmwareRev = vars[index].FirmwareRevReverse;
+										vars[index].Model = vars[index].ModelReverse;
+										vars[index].ModelSerial = GetModelSerial(vars[index].Model, vars[index].SerialNumber);
+									}
+									else if (vars[index].InterfaceType == INTERFACE_TYPE_USB)
+									{
+										// None
+									}
+									else
+									{
+										DebugPrint(_T("WmiModel: ") + model);
+										DebugPrint(_T("Model: ") + vars[index].Model);
+										DebugPrint(_T("SerialNumber: ") + vars[index].SerialNumber);
+										DebugPrint(_T("DISABLED: vars.RemoveAt(index) - 2"));
+										//	vars.RemoveAt(index);
+									}
 
-								// DEBUG
-								// vars[index].VendorId = VENDOR_MTRON;
-								DebugPrint(_T("OK:Check Model Name"));
+									// DEBUG
+									// vars[index].VendorId = VENDOR_MTRON;
+									DebugPrint(_T("OK:Check Model Name"));
+								}
 							}
 						}
 					}
+					catch (...)
+					{
+						DebugPrint(_T("EX:while(DeviceList for DiskDrive)"));
+					}
+
+				NextDisk:
+					pszId += wcslen(pszId) + 1;
 				}
-				catch(...)
-				{
-					DebugPrint(_T("EX:while(pEnumCOMDevs"));
-				}
-				}
-				SAFE_RELEASE(pEnumCOMDevs);
+
 				DebugPrint(_T("OK2:SELECT * FROM Win32_DiskDrive"));
 			}
 			catch(...)
@@ -2011,12 +2020,7 @@ VOID CAtaSmart::Init(BOOL useWmi, BOOL advancedDiskSearch, PBOOL flagChangeDisk,
 				DebugPrint(_T("EX:Drive Letter Mapping"));
 			}
 		*/
-safeRelease:
 
-			SAFE_RELEASE(pCOMDev);
-			SAFE_RELEASE(pEnumCOMDevs);
-			SAFE_RELEASE(pEnumCOMDevs2);
-			SAFE_RELEASE(pIWbemServices);
 		//	CoUninitialize();
 		//  DebugPrint(_T("OK:CoUninitialize()"));
 		}
