@@ -56,13 +56,13 @@ jobs:
       run: Compress-Archive -Path build/* -DestinationPath "${{ env.ARTIFACT_NAME }}.zip"
 
     - name: Generate Release Notes
-      id: generate_notes
+      env:
+        COMMITS_JSON: ${{ toJSON(github.event.commits) }}
       run: |
         $changelogLines = New-Object System.Collections.Generic.List[string]
         if ("${{ github.event_name }}" -eq "push") {
           Write-Host "Generating changelog from push event payload"
-          # The JSON payload must be piped to ConvertFrom-Json
-          $commits = '${{ toJSON(github.event.commits) }}' | ConvertFrom-Json
+          $commits = $env:COMMITS_JSON | ConvertFrom-Json
           if ($null -ne $commits) {
             foreach ($commit in $commits) {
               $shortSha = $commit.id.Substring(0, 7)
@@ -83,12 +83,7 @@ jobs:
           $changelogBody = "No new commits in this push. Automated build from commit ${{ github.sha }}."
         }
 
-        # Use a secure way to create a multi-line environment variable
-        $delimiter = "RELEASE_NOTES_$(Get-Random)"
-        "CHANGELOG_BODY<<$delimiter" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        $changelogBody | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        "$delimiter" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
+        $changelogBody | Out-File -FilePath "release_notes.txt" -Encoding utf8
 
     - name: Delete old release
       continue-on-error: true
@@ -104,6 +99,6 @@ jobs:
         gh release create latest "${{ env.ARTIFACT_NAME }}.zip" `
           --latest `
           --title "Build $date_version" `
-          --notes "${{ env.CHANGELOG_BODY }}"
+          --notes-file "release_notes.txt"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
