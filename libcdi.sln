@@ -7,8 +7,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcdi", "libcdi\libcdi.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cditest", "cditest\cditest.vcxproj", "{20A977E8-8A04-4AC1-B050-D940E2E6BA13}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imcdi", "imcdi\imcdi.vcxproj", "{6589E72A-373A-4191-A546-D16418134CF9}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Release|ARM64 = Release|ARM64
@@ -28,12 +26,6 @@ Global
 		{20A977E8-8A04-4AC1-B050-D940E2E6BA13}.Release|x64.Build.0 = Release|x64
 		{20A977E8-8A04-4AC1-B050-D940E2E6BA13}.Release|x86.ActiveCfg = Release|Win32
 		{20A977E8-8A04-4AC1-B050-D940E2E6BA13}.Release|x86.Build.0 = Release|Win32
-		{6589E72A-373A-4191-A546-D16418134CF9}.Release|ARM64.ActiveCfg = Release|ARM64
-		{6589E72A-373A-4191-A546-D16418134CF9}.Release|ARM64.Build.0 = Release|ARM64
-		{6589E72A-373A-4191-A546-D16418134CF9}.Release|x64.ActiveCfg = Release|x64
-		{6589E72A-373A-4191-A546-D16418134CF9}.Release|x64.Build.0 = Release|x64
-		{6589E72A-373A-4191-A546-D16418134CF9}.Release|x86.ActiveCfg = Release|Win32
-		{6589E72A-373A-4191-A546-D16418134CF9}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
